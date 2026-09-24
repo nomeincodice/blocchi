@@ -108,11 +108,13 @@ const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PL
 const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
 const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
 const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33, LAVA = 34;
+const WALL = { 35: [1, 0], 36: [-1, 0], 37: [0, 1], 38: [0, -1] }, TORCHES = [TORCH, 35, 36, 37, 38];
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
   [SNOW]: [15, 2, 16], [COAL_ORE]: [17, 17, 17], [IRON_ORE]: [18, 18, 18], [STONEBRICK]: [19, 19, 19], [BOOKSHELF]: [8, 8, 20],
   [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38], [LAVA]: [39, 39, 39],
+  35: [13, 13, 13], 36: [13, 13, 13], 37: [13, 13, 13], 38: [13, 13, 13],
 };
 const FLUID = [WATER, LAVA];
 const ITEM_TILE = {
@@ -122,19 +124,19 @@ const ITEM_TILE = {
 const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
   'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra',
   'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
-  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava'];
+  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia'];
 const IDS = NAMES.map((_, id) => id);
-const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id));
+const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id]);
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
-const CLEAR = [LEAVES, GLASS, WATER, TORCH];
-const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL };
+const CLEAR = [LEAVES, GLASS, WATER, ...TORCHES];
+const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
 const TOOLS = { pick: [WPICK, SPICK, IPICK], axe: [WAXE, SAXE, IAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL] };
 const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12], HOTBAR = [...TOOL_IDS, ...PLACEABLE];
 const HARD = {
   [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [GRAVEL]: [0.9, 'shovel'], [SNOW]: [0.5, 'shovel'],
   [STONE]: [6, 'pick', 1], [COBBLE]: [8, 'pick', 1], [BRICKS]: [8, 'pick', 1], [STONEBRICK]: [7, 'pick', 1],
   [COAL_ORE]: [7, 'pick', 1], [IRON_ORE]: [7, 'pick', 2], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [BOOKSHELF]: [2, 'axe'],
-  [TABLE]: [3, 'axe'], [CHEST]: [2, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], [LAMP]: [0.5],
+  [TABLE]: [3, 'axe'], [CHEST]: [2, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], 35: [0], 36: [0], 37: [0], 38: [0], [LAMP]: [0.5],
 };
 const RECIPES = [
   [{ [LOG]: 1 }, PLANKS, 4],
@@ -161,7 +163,7 @@ const RECIPES = [
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
   [{ [PLANKS]: 8 }, CHEST, 1],
 ];
-const solid = b => b && !FLUID.includes(b) && b !== TORCH;
+const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b);
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, CHEST];
 const cheat = { xray: false, instant: false, god: false };
@@ -310,10 +312,10 @@ function skyOf(c, [dx, dy, dz], x, y, z) {
   return cheat.xray || depth < 2 ? 1 : Math.max(0.1, 1 - (depth - 1) * 0.22);
 }
 
-function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1], ao = [1, 1, 1, 1], sky = 1) {
+function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1], ao = [1, 1, 1, 1], sky = 1, lean = [0, 0]) {
   const n = m.pos.length / 3;
   corners.forEach(([cx, cy, cz, u, v], i) => {
-    m.pos.push(x + cx * size[0], y + cy * size[1], z + cz * size[2]);
+    m.pos.push(x + cx * size[0] + cy * lean[0], y + cy * size[1], z + cz * size[2] + cy * lean[1]);
     m.nor.push(...dir);
     m.uv.push((tile + 0.01 + u * 0.98) / TILES.length, v);
     m.col.push(shade * ao[i], shade * ao[i], shade * ao[i]);
@@ -329,9 +331,12 @@ function buildMesh(c) {
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
     if (id === LAVA && !c.data[at(x, y + 1, z)] && (x + z) % 4 === 0) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 1.2, c.cz * CS + z + 0.5));
-    if (id === TORCH || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
-    if (id === TORCH) for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
-    if (!id || id === TORCH || cheat.xray && !XRAY.includes(id)) continue;
+    if (TORCHES.includes(id) || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
+    if (TORCHES.includes(id)) {
+      const [dx, dz] = WALL[id] ?? [0, 0];
+      for (const f of FACES) quad(m, f, x + 0.4375 - dx * 0.4, y + (dx || dz ? 0.2 : 0), z + 0.4375 - dz * 0.4, 13, 2, [0.125, 0.625, 0.125], undefined, 1, [dx * 0.3, dz * 0.3]);
+    }
+    if (!id || TORCHES.includes(id) || cheat.xray && !XRAY.includes(id)) continue;
     for (const f of FACES) {
       const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP || id === LAVA ? 2 : 0;
       if (n && !(CLEAR.includes(n) && n !== id) && !(cheat.xray && !XRAY.includes(n))) continue;
@@ -592,11 +597,12 @@ function place() {
   const r = raycast(), p = player.pos, id = sel;
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (!r?.prev || !inv[id] || !BLOCKS[id]) return;
-  const [x, y, z] = r.prev;
-  if (y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
+  const [x, y, z] = r.prev, [dx, dy, dz] = r.prev.map((v, i) => v - r.hit[i]);
+  const put = id !== TORCH || dy === 1 ? id : dy === -1 ? 0 : dx === 1 ? 35 : dx === -1 ? 36 : dz === 1 ? 37 : 38;
+  if (!put || y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
   inv[id]--;
   swing ||= 0.01;
-  set(x, y, z, id);
+  set(x, y, z, put);
   if (id === CHEST) { chests[[x, y, z].join()] = {}; saveChests(); }
   drawInv();
 }
