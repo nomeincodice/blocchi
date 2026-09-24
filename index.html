@@ -17,7 +17,6 @@
   .cross { position: fixed; left: 50%; top: 50%; translate: -50% -50%; font-size: 26px; pointer-events: none; mix-blend-mode: difference; }
   .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: var(--left); justify-items: start; text-shadow: 0 2px 3px var(--edge); pointer-events: none; }
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
-  .tools { --s: 28px; justify-content: start; }
   .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
   .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; scrollbar-width: none; background: var(--slot); }
   .bar:empty { display: none; }
@@ -31,7 +30,10 @@
   .gui h2 { margin: 0 auto; }
   .head { justify-self: stretch; }
   .gui .close { padding: 4px 12px; color: var(--ink); background: var(--gui); border-color: var(--edge); }
-  .gui .icon { --s: 32px; }
+  .gui { --s: 32px; }
+  .gui input { width: 22px; height: 22px; }
+  .grid9 { width: min(calc(9 * (var(--s) + 10px)), 86vw); }
+  .slot:empty::before { content: ''; display: block; width: var(--s); height: var(--s); }
   .slot { padding: 3px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo), inset -2px -2px var(--gui-hi); }
   .inv:empty { display: none; }
   .recipe { display: grid; gap: 4px; justify-items: center; padding: 8px; font: inherit; font-size: 13px; color: var(--ink); background: var(--gui); border: 2px solid var(--edge); box-shadow: inset 2px 2px var(--gui-hi), inset -2px -2px var(--gui-lo); cursor: pointer; }
@@ -41,6 +43,7 @@
   .rotate { display: none; }
   .pad { position: fixed; right: var(--right); bottom: var(--bottom); display: grid; grid-template-columns: repeat(2, var(--pad)); gap: 10px; }
   .pad button { height: var(--pad); padding: 0; font-size: calc(var(--pad) * 0.42); border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
+  .corner { position: fixed; top: max(10px, env(safe-area-inset-top)); right: var(--right); width: 44px; height: 44px; padding: 0; font-size: 20px; border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
   .joy { position: fixed; width: 100px; height: 100px; translate: -50% -50%; border: 2px solid var(--pick); border-radius: 50%; pointer-events: none; }
   @media (pointer: coarse) {
     :root { --s: 34px; }
@@ -55,7 +58,7 @@
 </head>
 <body>
 <div class="cross">+</div>
-<div class="hud stack"><div class="info"></div><div class="row tools"></div></div>
+<div class="hud stack"><div class="info"></div></div>
 <div class="bar"></div>
 <div class="joy" style="display: none"></div>
 <div class="pad touch">
@@ -63,14 +66,24 @@
   <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
   <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
 </div>
+<button class="corner touch" data-key="KeyC">🪄</button>
 <div class="panel stack start"><h1>Blocchi</h1>
   <p class="mouse">Clicca per giocare</p>
-  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting<br>Tieni premuto click sinistro per rompere · Click destro piazza · 1-9 o rotella scegli blocco · Esc pausa</p>
+  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting · C trucchi<br>Tieni premuto click sinistro per rompere · Click destro piazza o apre i bauli · 1-9 o rotella scegli blocco · Esc pausa</p>
   <p class="touch">Tocca per giocare</p>
-  <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting</p>
+  <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting · 🪄 trucchi</p>
 </div>
 <div class="panel stack craft" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Crafting</h2><button class="btn close">✕</button></div><div class="row inv"></div><div class="stack cols recipes"></div></div>
+</div>
+<div class="panel stack chest" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 pack"></div></div>
+</div>
+<div class="panel stack cheat" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Trucchi</h2><button class="btn close">✕</button></div>
+    <label class="row"><input type="checkbox" class="xray"> Vista a raggi X: solo minerali e bauli</label>
+    <label class="row"><input type="checkbox" class="instant"> Scavo istantaneo, anche senza attrezzi</label>
+  </div>
 </div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
 <script type="importmap">
@@ -84,12 +97,12 @@ const CS = 16, H = 64, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, 
 const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11, TORCH = 12;
 const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
 const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
-const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32;
+const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33;
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
   [SNOW]: [15, 2, 16], [COAL_ORE]: [17, 17, 17], [IRON_ORE]: [18, 18, 18], [STONEBRICK]: [19, 19, 19], [BOOKSHELF]: [8, 8, 20],
-  [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23],
+  [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38],
 };
 const ITEM_TILE = {
   [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
@@ -98,19 +111,19 @@ const ITEM_TILE = {
 const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
   'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra',
   'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
-  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro'];
+  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule'];
 const IDS = NAMES.map((_, id) => id);
 const PLACEABLE = IDS.filter(id => BLOCKS[id] && id !== WATER);
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
 const CLEAR = [LEAVES, GLASS, WATER, TORCH];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL };
 const TOOLS = { pick: [WPICK, SPICK, IPICK], axe: [WAXE, SAXE, IAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL] };
-const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12];
+const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12], HOTBAR = [...TOOL_IDS, ...PLACEABLE];
 const HARD = {
   [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [GRAVEL]: [0.9, 'shovel'], [SNOW]: [0.5, 'shovel'],
   [STONE]: [6, 'pick', 1], [COBBLE]: [8, 'pick', 1], [BRICKS]: [8, 'pick', 1], [STONEBRICK]: [7, 'pick', 1],
   [COAL_ORE]: [7, 'pick', 1], [IRON_ORE]: [7, 'pick', 2], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [BOOKSHELF]: [2, 'axe'],
-  [TABLE]: [3, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], [LAMP]: [0.5],
+  [TABLE]: [3, 'axe'], [CHEST]: [2, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], [LAMP]: [0.5],
 };
 const RECIPES = [
   [{ [LOG]: 1 }, PLANKS, 4],
@@ -135,9 +148,12 @@ const RECIPES = [
   [{ [DIRT]: 1, [LEAVES]: 1 }, GRASS, 1],
   [{ [PLANKS]: 6 }, BOOKSHELF, 1],
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
+  [{ [PLANKS]: 8 }, CHEST, 1],
 ];
 const solid = b => b && b !== WATER && b !== TORCH;
 const AO = [0.45, 0.65, 0.82, 1];
+const XRAY = [COAL_ORE, IRON_ORE, CHEST];
+const cheat = { xray: false, instant: false };
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -186,6 +202,8 @@ const TILES = [
   (x, y) => y >= 6 && y <= 10 && x >= 4 - (y - 6 >> 1) && x <= 11 + (y - 6 >> 1) ? (y === 6 ? [245, 245, 250] : jit(C.iron, 0.05)) : NONE,
   ...HEADS.flatMap(head => TOOL.map(m => (x, y) => head(x, y) ? jit(m, 0.08) : handle(x, y) ? jit(C.bark) : NONE)),
   (x, y) => x >= 7 && x <= 8 && y >= 4 ? jit([120, 85, 45]) : x >= 6 && x <= 9 && y >= 1 && y < 4 ? jit(C.flame, 0.1) : NONE,
+  (x, y) => jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
+  (x, y) => y === 5 ? jit(dim(C.wood, 0.45)) : x >= 7 && x <= 8 && y >= 4 && y <= 7 ? jit([200, 200, 205]) : jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
 ];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
@@ -202,6 +220,12 @@ function noise(x, z) {
   const a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
+function noise3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), s = t => t * t * (3 - 2 * t), l = (a, b, t) => a + (b - a) * t;
+  const u = s(x - xi), v = s(y - yi), w = s(z - zi), h = (a, b, c) => hash(xi + a + (yi + b) * 7919, zi + c);
+  return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
+}
+const cave = (x, y, z) => Math.abs(noise3(x / 16, y / 10, z / 16) - 0.5) < 0.05 && Math.abs(noise3(x / 16 + 40, y / 10, z / 16) - 0.5) < 0.05;
 const height = (x, z) => Math.floor(12 + noise(x / 64, z / 64) * 30 + noise(x / 16 + 100, z / 16) * 6 + noise(x / 4 + 200, z / 4) * 1.5);
 const at = (x, y, z) => x + z * CS + y * CS * CS;
 const ck = (cx, cz) => cx + ',' + cz;
@@ -220,26 +244,32 @@ function tree(d, x, y, z) {
 
 function ore(x, y, z) {
   const k = hash((x >> 1) + (y >> 1) * 7919, z >> 1);
-  return k < 0.025 ? COAL_ORE : k < 0.035 && y < 28 ? IRON_ORE : STONE;
+  return k < 0.012 ? COAL_ORE : k < 0.02 && y < 28 ? IRON_ORE : STONE;
+}
+
+function carve(d, x, z, wx, wz, h) {
+  for (let y = 1; y < h - 2; y++) if (cave(wx, y, wz)) d[at(x, y, z)] = d[at(x, y - 1, z)] && hash(wx * 13 + y, wz * 7) < 0.001 ? CHEST : AIR;
 }
 
 function generate(cx, cz) {
-  const d = new Uint8Array(CS * CS * H);
+  const d = new Uint8Array(CS * CS * H), heights = new Int16Array(18 * 18);
+  for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = height(cx * CS + x, cz * CS + z);
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
-    const wx = cx * CS + x, wz = cz * CS + z, h = height(wx, wz);
+    const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18];
     const top = h <= SEA - 3 && noise(wx / 8 + 50, wz / 8) > 0.6 ? GRAVEL : h < 22 ? SAND : h > 42 ? SNOW : h > 38 ? STONE : GRASS;
     const under = top === GRASS || top === SNOW ? DIRT : top;
     for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
+    carve(d, x, z, wx, wz, h);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
     if (top === GRASS && x > 1 && x < 14 && z > 1 && z < 14 && hash(wx, wz + 7777) < 0.015) tree(d, x, h + 1, z);
   }
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) d[i] = id;
-  return d;
+  return [d, heights];
 }
 
 function chunk(cx, cz) {
   let c = chunks.get(ck(cx, cz));
-  if (!c) chunks.set(ck(cx, cz), c = { cx, cz, data: generate(cx, cz), mesh: null });
+  if (!c) { const [data, heights] = generate(cx, cz); chunks.set(ck(cx, cz), c = { cx, cz, data, heights, mesh: null }); }
   return c;
 }
 
@@ -263,29 +293,36 @@ function aoOf(c, [dir, , , corners], x, y, z) {
   });
 }
 
-function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1], ao = [1, 1, 1, 1]) {
+function skyOf(c, [dx, dy, dz], x, y, z) {
+  const depth = c.heights[x + dx + 1 + (z + dz + 1) * 18] - y - dy;
+  return cheat.xray || depth < 2 ? 1 : Math.max(0.1, 1 - (depth - 1) * 0.22);
+}
+
+function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1], ao = [1, 1, 1, 1], sky = 1) {
   const n = m.pos.length / 3;
   corners.forEach(([cx, cy, cz, u, v], i) => {
     m.pos.push(x + cx * size[0], y + cy * size[1], z + cz * size[2]);
     m.nor.push(...dir);
     m.uv.push((tile + 0.01 + u * 0.98) / TILES.length, v);
     m.col.push(shade * ao[i], shade * ao[i], shade * ao[i]);
+    m.sky.push(sky);
   });
   if (ao[0] + ao[3] < ao[1] + ao[2]) m.idx[layer].push(n, n + 1, n + 3, n, n + 3, n + 2);
   else m.idx[layer].push(n, n + 1, n + 2, n + 2, n + 1, n + 3);
 }
 
 function buildMesh(c) {
-  const m = { pos: [], nor: [], uv: [], col: [], idx: [[], [], []] };
+  const m = { pos: [], nor: [], uv: [], col: [], sky: [], idx: [[], [], []] };
   c.torches = [];
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
     if (id === TORCH || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
     if (id === TORCH) for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
-    if (!id || id === TORCH) continue;
+    if (!id || id === TORCH || cheat.xray && !XRAY.includes(id)) continue;
     for (const f of FACES) {
-      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]);
-      if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], id === WATER ? 1 : id === LAMP ? 2 : 0, undefined, id === WATER ? undefined : aoOf(c, f, x, y, z));
+      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP ? 2 : 0;
+      if (n && !(CLEAR.includes(n) && n !== id) && !(cheat.xray && !XRAY.includes(n))) continue;
+      quad(m, f, x, y, z, BLOCKS[id][f[2]], layer, undefined, layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -293,6 +330,7 @@ function buildMesh(c) {
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(m.nor, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(m.uv, 2));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(m.col, 3));
+  geo.setAttribute('sky', new THREE.Float32BufferAttribute(m.sky, 1));
   geo.setIndex(m.idx.flat());
   m.idx.reduce((s, l, i) => (geo.addGroup(s, l.length, i), s + l.length), 0);
   if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); }
@@ -359,6 +397,11 @@ tex.magFilter = tex.minFilter = THREE.NearestFilter;
 tex.colorSpace = THREE.SRGBColorSpace;
 const material = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, alphaTest: 0.5 });
 const waterMat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+material.onBeforeCompile = waterMat.onBeforeCompile = shader => {
+  shader.vertexShader = 'attribute float sky;\nvarying float vSky;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvSky = sky;');
+  shader.fragmentShader = 'varying float vSky;\n' + shader.fragmentShader.replace('#include <lights_fragment_begin>',
+    THREE.ShaderChunk.lights_fragment_begin.replace('getAmbientLightIrradiance( ambientLightColor )', 'getAmbientLightIrradiance( ambientLightColor ) * vSky'));
+};
 const torchMat = new THREE.MeshBasicMaterial({ map: tex });
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -401,6 +444,8 @@ const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: fal
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = IDS.map(i => saved?.inv[i] ?? 0);
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
+const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
+let chestAt = '';
 let sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
@@ -455,8 +500,9 @@ function raycast() {
   }
 }
 
-const tier = type => type ? TOOLS[type].findLastIndex(id => inv[id]) + 1 : 0;
+const tier = type => (TOOLS[type]?.indexOf(sel) ?? -1) + 1;
 function digTime(id) {
+  if (cheat.instant) return 0.15;
   const [t, type, min = 0] = HARD[id], k = tier(type);
   return k < min ? Infinity : t / SPEED[k];
 }
@@ -500,18 +546,25 @@ function updateBits(dt) {
 
 function place() {
   const r = raycast(), p = player.pos, id = sel;
-  if (!r?.prev || !inv[id]) return;
+  if (r && get(...r.hit) === CHEST) return openChest(r.hit);
+  if (!r?.prev || !inv[id] || !BLOCKS[id]) return;
   const [x, y, z] = r.prev;
   if (y >= H || id === TORCH && get(x, y, z) === WATER || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
   inv[id]--;
   swing ||= 0.01;
   set(x, y, z, id);
+  if (id === CHEST) { chests[[x, y, z].join()] = {}; saveChests(); }
   drawInv();
 }
 
 function dig([x, y, z]) {
   const id = get(x, y, z), wet = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === WATER);
   inv[DROP[id] ?? id]++;
+  if (id === CHEST) {
+    for (const [k, n] of Object.entries(chests[[x, y, z].join()] ?? loot([x, y, z]))) inv[k] += n;
+    delete chests[[x, y, z].join()];
+    saveChests();
+  }
   burst([x, y, z], id, 14);
   set(x, y, z, wet ? WATER : AIR);
   drawInv();
@@ -534,9 +587,8 @@ function hold(id) {
 }
 
 function animateHand(r, dt) {
-  const digging = !!(keys.Dig && r), type = digging && HARD[get(...r.hit)]?.[1];
-  const show = digging ? (type && TOOLS[type].findLast(id => inv[id])) || 0 : sel;
-  if (show !== held) hold(show);
+  const digging = !!(keys.Dig && r);
+  if (sel !== held) hold(sel);
   if (digging || swing > 0) swing += dt * 12;
   if (swing > Math.PI) swing = digging ? swing - Math.PI : 0;
   const s = Math.sin(swing);
@@ -544,7 +596,7 @@ function animateHand(r, dt) {
   hand.position.y = -0.3 + s * 0.06;
 }
 
-const owned = () => PLACEABLE.filter(id => inv[id] > 0);
+const owned = () => HOTBAR.filter(id => inv[id] > 0);
 
 function icon(id, n) {
   const d = document.createElement('div');
@@ -575,7 +627,6 @@ function drawInv() {
     d.onclick = () => choose(id);
     return d;
   }));
-  $('.tools').replaceChildren(...Object.values(TOOLS).map(ids => ids.findLast(id => inv[id])).filter(Boolean).map(id => icon(id)));
   $('.inv').replaceChildren(...IDS.filter(id => inv[id] > 0).map(id => slot(id, inv[id])));
 }
 
@@ -592,11 +643,12 @@ function drawCraft() {
   }));
 }
 
-const crafting = () => $('.craft').style.display !== 'none';
+const MENUS = ['craft', 'chest', 'cheat'];
+const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
   playing = on;
-  $('.start').style.display = on || crafting() ? 'none' : '';
+  $('.start').style.display = on || menu() ? 'none' : '';
 }
 
 function start() {
@@ -605,13 +657,35 @@ function start() {
   setPlaying(true);
 }
 
-function toggleCraft() {
-  const open = !crafting();
-  $('.craft').style.display = open ? '' : 'none';
-  if (!open) return start();
-  drawCraft();
+function openMenu(name) {
+  for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
+  if (!name) return start();
+  if (name === 'craft') drawCraft();
+  if (name === 'chest') drawChest();
   setPlaying(false);
   document.exitPointerLock?.();
+}
+
+const saveChests = () => localStorage.setItem('blocchi-chests', JSON.stringify(chests));
+
+function loot([x, y, z]) {
+  const k = i => hash(x * 31 + i, z * 17 + y);
+  return { [COAL]: 2 + (k(1) * 7 | 0), [TORCH]: 2 + (k(2) * 5 | 0), [IRON_ORE]: 1 + (k(3) * 3 | 0), [IRON]: k(4) < 0.4 ? 1 + (k(5) * 3 | 0) : 0 };
+}
+
+function openChest(hit) {
+  chestAt = hit.join();
+  chests[chestAt] ??= loot(hit);
+  openMenu('chest');
+}
+
+function drawChest() {
+  const box = chests[chestAt], items = Object.entries(box).filter(([, n]) => n > 0);
+  const move = (from, to, id) => { to[id] = (to[id] ?? 0) + from[id]; from[id] = 0; saveChests(); drawInv(); drawChest(); };
+  const cell = (from, to, id, n) => { const c = slot(id, n); c.onclick = () => move(from, to, id); return c; };
+  const empty = Array.from({ length: Math.max(0, 27 - items.length) }, () => Object.assign(document.createElement('div'), { className: 'slot' }));
+  $('.box').replaceChildren(...items.map(([id, n]) => cell(box, inv, id, n)), ...empty);
+  $('.pack').replaceChildren(...IDS.filter(id => inv[id] > 0).map(id => cell(inv, box, id, inv[id])));
 }
 
 function sky(dt) {
@@ -640,7 +714,7 @@ function lightTorches() {
 
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
-  const need = tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
+  const need = !cheat.instant && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
   return `${NAMES[sel] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}`;
 }
 
@@ -676,7 +750,8 @@ onkeydown = e => {
   keys[e.code] = true;
   if (/^Digit[1-9]$/.test(e.code)) choose(owned()[e.code[5] - 1] ?? sel);
   if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel.y = 0; }
-  if (e.code === 'KeyE' && !e.repeat) toggleCraft();
+  if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
+  if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
   if (e.code === 'Place' && playing) place();
 };
 onkeyup = e => keys[e.code] = false;
@@ -712,7 +787,7 @@ canvas.onpointerup = canvas.onpointercancel = e => {
   if (drags.get(e.pointerId)?.move) { joy.x = joy.y = 0; $('.joy').style.display = 'none'; }
   drags.delete(e.pointerId);
 };
-for (const b of document.querySelectorAll('.pad button')) {
+for (const b of document.querySelectorAll('[data-key]')) {
   b.onpointerdown = () => onkeydown({ code: b.dataset.key });
   b.onpointerup = b.onpointercancel = () => onkeyup({ code: b.dataset.key });
 }
@@ -720,7 +795,12 @@ oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
 document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time }));
 $('.start').onclick = start;
-$('.close').onclick = toggleCraft;
+for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
+$('.instant').onchange = e => cheat.instant = e.target.checked;
+$('.xray').onchange = e => {
+  cheat.xray = e.target.checked;
+  for (const c of chunks.values()) if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; }
+};
 document.onpointerlockchange = () => setPlaying(!!document.pointerLockElement);
 
 document.body.style.setProperty('--n', TILES.length);
