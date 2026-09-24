@@ -19,7 +19,7 @@
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
   .tools { --s: 28px; justify-content: start; }
   .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
-  .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; background: var(--slot); }
+  .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; scrollbar-width: none; background: var(--slot); }
   .bar:empty { display: none; }
   .bar .on { outline: 3px solid var(--pick); outline-offset: -3px; }
   .stack { display: grid; gap: 8px; }
@@ -137,6 +137,7 @@ const RECIPES = [
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
 ];
 const solid = b => b && b !== WATER && b !== TORCH;
+const AO = [0.45, 0.65, 0.82, 1];
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -253,15 +254,25 @@ function near(c, x, y, z) {
   return get(c.cx * CS + x, y, c.cz * CS + z);
 }
 
-function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1]) {
+function aoOf(c, [dir, , , corners], x, y, z) {
+  const [a, b] = [0, 1, 2].filter(i => !dir[i]), p = [x + dir[0], y + dir[1], z + dir[2]];
+  const occ = (da, db) => { const q = [...p]; q[a] += da; q[b] += db; const n = near(c, ...q); return +!!(n && !CLEAR.includes(n)); };
+  return corners.map(corner => {
+    const sa = corner[a] ? 1 : -1, sb = corner[b] ? 1 : -1, s1 = occ(sa, 0), s2 = occ(0, sb);
+    return AO[s1 && s2 ? 0 : 3 - s1 - s2 - occ(sa, sb)];
+  });
+}
+
+function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1], ao = [1, 1, 1, 1]) {
   const n = m.pos.length / 3;
-  for (const [cx, cy, cz, u, v] of corners) {
+  corners.forEach(([cx, cy, cz, u, v], i) => {
     m.pos.push(x + cx * size[0], y + cy * size[1], z + cz * size[2]);
     m.nor.push(...dir);
     m.uv.push((tile + 0.01 + u * 0.98) / TILES.length, v);
-    m.col.push(shade, shade, shade);
-  }
-  m.idx[layer].push(n, n + 1, n + 2, n + 2, n + 1, n + 3);
+    m.col.push(shade * ao[i], shade * ao[i], shade * ao[i]);
+  });
+  if (ao[0] + ao[3] < ao[1] + ao[2]) m.idx[layer].push(n, n + 1, n + 3, n, n + 3, n + 2);
+  else m.idx[layer].push(n, n + 1, n + 2, n + 2, n + 1, n + 3);
 }
 
 function buildMesh(c) {
@@ -274,7 +285,7 @@ function buildMesh(c) {
     if (!id || id === TORCH) continue;
     for (const f of FACES) {
       const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]);
-      if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], id === WATER ? 1 : id === LAMP ? 2 : 0);
+      if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], id === WATER ? 1 : id === LAMP ? 2 : 0, undefined, id === WATER ? undefined : aoOf(c, f, x, y, z));
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -331,6 +342,18 @@ function paintAtlas() {
   return c;
 }
 
+function paintCracks() {
+  const c = document.createElement('canvas'), g = c.getContext('2d'), pts = [];
+  c.width = 160; c.height = 16;
+  for (let i = 0; i < 7; i++) {
+    let x = 7.5, y = 7.5, a = i * 0.9 + rnd();
+    for (let j = 0; j < 14; j++) { x += Math.cos(a); y += Math.sin(a); a += rnd() - 0.5; pts.push([x | 0, y | 0, j]); }
+  }
+  g.fillStyle = '#000b';
+  for (let s = 0; s < 10; s++) for (const [x, y, j] of pts) if (j <= s * 1.5 && x >= 0 && x < 16 && y >= 0 && y < 16) g.fillRect(s * 16 + x, y, 1, 1);
+  return c;
+}
+
 const atlas = paintAtlas(), tex = new THREE.CanvasTexture(atlas);
 tex.magFilter = tex.minFilter = THREE.NearestFilter;
 tex.colorSpace = THREE.SRGBColorSpace;
@@ -348,7 +371,11 @@ scene.fog = new THREE.Fog(SKY, R * CS * 0.5, R * CS);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 1000);
 camera.rotation.order = 'YXZ';
 const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01)), new THREE.LineBasicMaterial({ color: '#000' }));
-const crack = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, depthWrite: false }));
+const crackTex = new THREE.CanvasTexture(paintCracks());
+crackTex.magFilter = crackTex.minFilter = THREE.NearestFilter;
+crackTex.repeat.x = 0.1;
+const crack = new THREE.Mesh(new THREE.BoxGeometry(1.002, 1.002, 1.002), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
+const bitMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide }), bits = [];
 const sun = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshBasicMaterial({ color: '#fff4a0', fog: false }));
 const moon = new THREE.Mesh(sun.geometry, new THREE.MeshBasicMaterial({ color: '#dde4f0', fog: false }));
 const ambient = new THREE.AmbientLight('#fff', Math.PI);
@@ -358,7 +385,8 @@ const DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
 const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.3), new THREE.MeshLambertMaterial({ color: '#d9a066', depthTest: false }));
-const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), heldMat);
+const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false }));
+cube.geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3));
 const flat = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), heldMat);
 const hand = new THREE.Group();
 fist.rotation.set(0.35, -0.25, 0);
@@ -372,8 +400,8 @@ camera.add(hand);
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0 };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = IDS.map(i => saved?.inv[i] ?? 0);
-const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0 };
-let sel = 0, held = -1, swing = 0, time = saved?.time ?? DAY * 0.05, playing = false;
+const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
+let sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -437,10 +465,37 @@ function mine(r, dt) {
   const target = r && keys.Dig ? r.hit.join() : '';
   mining.p = target && target === mining.target ? mining.p + dt / digTime(get(...r.hit)) : 0;
   mining.target = target;
+  mining.tick += dt;
+  if (target && mining.tick > 0.2) { mining.tick = 0; burst(r.hit, get(...r.hit), 1, r.prev); }
   if (mining.p >= 1 && r.hit[1] > 0) { dig(r.hit); mining.p = 0; }
   crack.visible = mining.p > 0;
   crack.position.copy(outline.position);
-  crack.material.opacity = Math.min(1, mining.p) * 0.7;
+  crackTex.offset.x = Math.min(9, Math.floor(mining.p * 10)) / 10;
+}
+
+function burst(hit, id, n, face) {
+  const tile = BLOCKS[id]?.[2];
+  for (let i = 0; i < n && tile !== undefined; i++) {
+    const g = new THREE.PlaneGeometry(0.1, 0.1), uv = g.attributes.uv, u = rnd() * 0.75, v = rnd() * 0.75;
+    for (let k = 0; k < 4; k++) uv.setXY(k, (tile + u + uv.getX(k) * 0.25) / TILES.length, v + uv.getY(k) * 0.25);
+    const off = face ? face.map((f, a) => f === hit[a] ? rnd() * 0.8 - 0.4 : (f - hit[a]) * 0.55) : [rnd() - 0.5, rnd() - 0.5, rnd() - 0.5];
+    const b = new THREE.Mesh(g, bitMat);
+    b.position.set(hit[0] + 0.5 + off[0], hit[1] + 0.5 + off[1], hit[2] + 0.5 + off[2]);
+    b.userData = { vel: new THREE.Vector3(rnd() * 4 - 2, rnd() * 3 + 1, rnd() * 4 - 2), life: 0.5 + rnd() * 0.5 };
+    scene.add(b);
+    bits.push(b);
+  }
+}
+
+function updateBits(dt) {
+  for (const b of [...bits]) {
+    const d = b.userData, next = b.position.clone().addScaledVector(d.vel, dt);
+    d.life -= dt;
+    d.vel.y -= 18 * dt;
+    if (solid(get(...next.toArray().map(Math.floor)))) d.vel.set(0, 0, 0); else b.position.copy(next);
+    b.quaternion.copy(camera.quaternion);
+    if (d.life <= 0) { scene.remove(b); b.geometry.dispose(); bits.splice(bits.indexOf(b), 1); }
+  }
 }
 
 function place() {
@@ -457,6 +512,7 @@ function place() {
 function dig([x, y, z]) {
   const id = get(x, y, z), wet = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === WATER);
   inv[DROP[id] ?? id]++;
+  burst([x, y, z], id, 14);
   set(x, y, z, wet ? WATER : AIR);
   drawInv();
 }
@@ -610,6 +666,7 @@ function loop(t) {
   $('.info').textContent = hud(r);
   animateHand(r, dt);
   mine(r, dt);
+  updateBits(dt);
   lightTorches();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
@@ -624,7 +681,11 @@ onkeydown = e => {
 };
 onkeyup = e => keys[e.code] = false;
 onwheel = e => {
-  const own = owned(), i = own.indexOf(sel) + Math.sign(e.deltaY);
+  wheel += e.deltaY;
+  if (Math.abs(wheel) < 100 || e.timeStamp - wheelAt < 150) return;
+  const own = owned(), i = own.indexOf(sel) + Math.sign(wheel);
+  wheel = 0;
+  wheelAt = e.timeStamp;
   choose(own[(i + own.length) % own.length] ?? 0);
 };
 onmousemove = e => { if (document.pointerLockElement) look(e.movementX, e.movementY, 0.002); };
