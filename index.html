@@ -10,11 +10,18 @@
   :root {
     --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --pad: 60px;
     --gui: #c6c6c6; --gui-hi: #fff; --gui-lo: #555; --gui-slot: #8b8b8b; --gui-hover: #d8d8e8; --ink: #3f3f3f; --edge: #000;
+    --heart: #e0282e; --heart-empty: #0007; --air: #9cf;
     --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); --bottom: max(12px, env(safe-area-inset-bottom));
   }
   body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; }
   .cross { position: fixed; left: 50%; top: 50%; translate: -50% -50%; font-size: 26px; pointer-events: none; mix-blend-mode: difference; }
+  .hearts { font-size: 18px; letter-spacing: 1px; }
+  .full { color: var(--heart); }
+  .half { color: var(--heart); opacity: 0.5; }
+  .empty { color: var(--heart-empty); }
+  .air { color: var(--air); }
+  .hurt { position: fixed; inset: 0; background: var(--heart); opacity: 0; pointer-events: none; }
   .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: var(--left); justify-items: start; text-shadow: 0 2px 3px var(--edge); pointer-events: none; }
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
   .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
@@ -58,7 +65,8 @@
 </head>
 <body>
 <div class="cross">+</div>
-<div class="hud stack"><div class="info"></div></div>
+<div class="hurt"></div>
+<div class="hud stack"><div class="info"></div><div class="hearts"><span class="full"></span><span class="half"></span><span class="empty"></span> <span class="air"></span></div></div>
 <div class="bar"></div>
 <div class="joy" style="display: none"></div>
 <div class="pad touch">
@@ -83,8 +91,10 @@
   <div class="gui stack"><div class="row head"><h2>Trucchi</h2><button class="btn close">✕</button></div>
     <label class="row"><input type="checkbox" class="xray"> Vista a raggi X: solo minerali e bauli</label>
     <label class="row"><input type="checkbox" class="instant"> Scavo istantaneo, anche senza attrezzi</label>
+    <label class="row"><input type="checkbox" class="god"> Invincibile</label>
   </div>
 </div>
+<div class="panel stack dead" style="display: none"><h1>Sei morto!</h1><p>Tieni tutto l'inventario</p><button class="btn close">Rinasci</button></div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
@@ -97,13 +107,14 @@ const CS = 16, H = 64, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, 
 const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11, TORCH = 12;
 const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
 const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
-const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33;
+const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33, LAVA = 34;
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
   [SNOW]: [15, 2, 16], [COAL_ORE]: [17, 17, 17], [IRON_ORE]: [18, 18, 18], [STONEBRICK]: [19, 19, 19], [BOOKSHELF]: [8, 8, 20],
-  [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38],
+  [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38], [LAVA]: [39, 39, 39],
 };
+const FLUID = [WATER, LAVA];
 const ITEM_TILE = {
   [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
   [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35,
@@ -111,9 +122,9 @@ const ITEM_TILE = {
 const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
   'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra',
   'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
-  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule'];
+  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava'];
 const IDS = NAMES.map((_, id) => id);
-const PLACEABLE = IDS.filter(id => BLOCKS[id] && id !== WATER);
+const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id));
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
 const CLEAR = [LEAVES, GLASS, WATER, TORCH];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL };
@@ -150,10 +161,10 @@ const RECIPES = [
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
   [{ [PLANKS]: 8 }, CHEST, 1],
 ];
-const solid = b => b && b !== WATER && b !== TORCH;
+const solid = b => b && !FLUID.includes(b) && b !== TORCH;
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, CHEST];
-const cheat = { xray: false, instant: false };
+const cheat = { xray: false, instant: false, god: false };
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -204,6 +215,7 @@ const TILES = [
   (x, y) => x >= 7 && x <= 8 && y >= 4 ? jit([120, 85, 45]) : x >= 6 && x <= 9 && y >= 1 && y < 4 ? jit(C.flame, 0.1) : NONE,
   (x, y) => jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
   (x, y) => y === 5 ? jit(dim(C.wood, 0.45)) : x >= 7 && x <= 8 && y >= 4 && y <= 7 ? jit([200, 200, 205]) : jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
+  () => jit(rnd() < 0.3 ? [255, 200, 60] : [225, 90, 20], 0.12),
 ];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
@@ -248,7 +260,7 @@ function ore(x, y, z) {
 }
 
 function carve(d, x, z, wx, wz, h) {
-  for (let y = 1; y < h - 2; y++) if (cave(wx, y, wz)) d[at(x, y, z)] = d[at(x, y - 1, z)] && hash(wx * 13 + y, wz * 7) < 0.001 ? CHEST : AIR;
+  for (let y = 1; y < h - 2; y++) if (cave(wx, y, wz)) d[at(x, y, z)] = y <= 5 ? LAVA : d[at(x, y - 1, z)] && hash(wx * 13 + y, wz * 7) < 0.001 ? CHEST : AIR;
 }
 
 function generate(cx, cz) {
@@ -316,11 +328,12 @@ function buildMesh(c) {
   c.torches = [];
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
+    if (id === LAVA && !c.data[at(x, y + 1, z)] && (x + z) % 4 === 0) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 1.2, c.cz * CS + z + 0.5));
     if (id === TORCH || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
     if (id === TORCH) for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
     if (!id || id === TORCH || cheat.xray && !XRAY.includes(id)) continue;
     for (const f of FACES) {
-      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP ? 2 : 0;
+      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP || id === LAVA ? 2 : 0;
       if (n && !(CLEAR.includes(n) && n !== id) && !(cheat.xray && !XRAY.includes(n))) continue;
       quad(m, f, x, y, z, BLOCKS[id][f[2]], layer, undefined, layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
     }
@@ -424,12 +437,14 @@ const moon = new THREE.Mesh(sun.geometry, new THREE.MeshBasicMaterial({ color: '
 const ambient = new THREE.AmbientLight('#fff', Math.PI);
 const lamps = Array.from({ length: 6 }, () => new THREE.PointLight('#ffb060', 0, 12, 1));
 scene.add(outline, crack, sun, moon, ambient, camera, ...lamps);
-const DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
+const HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
 const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.3), new THREE.MeshLambertMaterial({ color: '#d9a066', depthTest: false }));
+const SHADE = new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3);
 const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false }));
-cube.geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3));
+cube.geometry.setAttribute('color', SHADE);
+const dropCube = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }), drops = [];
 const flat = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), heldMat);
 const hand = new THREE.Group();
 fist.rotation.set(0.35, -0.25, 0);
@@ -440,12 +455,13 @@ hand.add(fist, cube, flat);
 hand.position.set(touch ? 0.2 : 0.34, -0.3, -0.6);
 camera.add(hand);
 
-const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0 };
+const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0, peak: -Infinity };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = IDS.map(i => saved?.inv[i] ?? 0);
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
 let chestAt = '';
+let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
@@ -468,8 +484,8 @@ function moveAxis(a, d) {
 
 function update(dt) {
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
-  const swim = !p.fly && get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)) === WATER;
-  const speed = (p.fly ? 11 : keys.ShiftLeft ? 5.6 : 4.3) * (swim ? 0.6 : 1);
+  const fluid = p.fly ? AIR : get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)), swim = FLUID.includes(fluid);
+  const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (fluid === LAVA ? 0.4 : swim ? 0.6 : 1);
   p.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed;
   p.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * speed;
   if (p.fly) p.vel.y = (key('Space') - key('ShiftLeft')) * speed;
@@ -479,6 +495,34 @@ function update(dt) {
   const steps = Math.ceil(p.vel.length() * dt / 0.4);
   p.ground = false;
   for (let i = 0; i < steps; i++) for (const a of ['x', 'y', 'z']) moveAxis(a, p.vel[a] * dt / steps);
+  vitals(dt, swim);
+}
+
+function vitals(dt, swim) {
+  const p = player, at = dy => get(Math.floor(p.pos.x), Math.floor(p.pos.y + dy), Math.floor(p.pos.z));
+  clock += dt;
+  if (p.ground && !p.fly && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
+  p.peak = p.ground || p.fly || swim ? p.pos.y : Math.max(p.peak, p.pos.y);
+  if ((at(0.1) === LAVA || at(1.2) === LAVA) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
+  air = at(1.62) === WATER ? air - dt : Math.min(10, air + dt * 4);
+  if (air < 0) { air += 1; hurt(2); }
+  if (clock - hurtAt > 4) hp = Math.min(20, hp + dt / 2);
+}
+
+function hurt(n) {
+  if (cheat.god || hp <= 0) return;
+  hp -= n;
+  hurtAt = clock;
+  $('.hurt').animate([{ opacity: 0.45 }, { opacity: 0 }], 400);
+  if (hp <= 0) { hp = 0; openMenu('dead'); }
+}
+
+function drawHearts() {
+  const full = Math.floor(hp / 2), half = hp - full * 2 >= 1 ? 1 : 0;
+  $('.full').textContent = '♥'.repeat(full);
+  $('.half').textContent = '♥'.repeat(half);
+  $('.empty').textContent = '♥'.repeat(10 - full - half);
+  $('.air').textContent = air < 10 ? '●'.repeat(Math.ceil(air)) : '';
 }
 
 function look(dx, dy, k) {
@@ -493,7 +537,7 @@ function raycast() {
   let prev = null;
   for (let t = 0; t <= REACH;) {
     const id = get(...b);
-    if (id && id !== WATER) return { hit: b, prev };
+    if (id && !FLUID.includes(id)) return { hit: b, prev };
     prev = [...b];
     const i = tMax.indexOf(Math.min(...tMax));
     b[i] += s[i]; t = tMax[i]; tMax[i] += delta[i];
@@ -549,7 +593,7 @@ function place() {
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (!r?.prev || !inv[id] || !BLOCKS[id]) return;
   const [x, y, z] = r.prev;
-  if (y >= H || id === TORCH && get(x, y, z) === WATER || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
+  if (y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
   inv[id]--;
   swing ||= 0.01;
   set(x, y, z, id);
@@ -558,16 +602,44 @@ function place() {
 }
 
 function dig([x, y, z]) {
-  const id = get(x, y, z), wet = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === WATER);
-  inv[DROP[id] ?? id]++;
+  const id = get(x, y, z), key = [x, y, z].join();
+  const fluid = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map(([dx, dy, dz]) => get(x + dx, y + dy, z + dz)).find(n => FLUID.includes(n));
+  drop(DROP[id] ?? id, 1, x + 0.5, y + 0.5, z + 0.5);
   if (id === CHEST) {
-    for (const [k, n] of Object.entries(chests[[x, y, z].join()] ?? loot([x, y, z]))) inv[k] += n;
-    delete chests[[x, y, z].join()];
+    for (const [k, n] of Object.entries(chests[key] ?? loot([x, y, z]))) if (n > 0) drop(+k, n, x + 0.5, y + 0.5, z + 0.5);
+    delete chests[key];
     saveChests();
   }
   burst([x, y, z], id, 14);
-  set(x, y, z, wet ? WATER : AIR);
-  drawInv();
+  set(x, y, z, fluid ?? AIR);
+}
+
+function drop(id, n, x, y, z) {
+  const sprite = !BLOCKS[id] || id === TORCH, [top, bottom, side] = BLOCKS[id] ?? [], group = new THREE.Group();
+  const mesh = new THREE.Mesh(sprite ? new THREE.PlaneGeometry(0.35, 0.35) : new THREE.BoxGeometry(0.25, 0.25, 0.25), sprite ? bitMat : dropCube);
+  if (!sprite) mesh.geometry.setAttribute('color', SHADE);
+  setTile(mesh, sprite ? [ICON[id]] : [side, side, top, bottom, side, side]);
+  group.position.set(x, y, z);
+  group.add(mesh);
+  scene.add(group);
+  drops.push({ id, n, group, mesh, vel: new THREE.Vector3(rnd() * 2 - 1, 3, rnd() * 2 - 1), age: 0 });
+}
+
+function updateDrops(dt) {
+  const target = player.pos.clone().setY(player.pos.y + 0.9);
+  for (const d of [...drops]) {
+    const g = d.group, dist = g.position.distanceTo(target), next = g.position.clone().addScaledVector(d.vel, dt);
+    d.age += dt;
+    d.vel.y -= 15 * dt;
+    if (d.age > 0.5 && dist < 2 && hp > 0) g.position.lerp(target, Math.min(1, dt * 10));
+    else if (solid(get(...next.toArray().map(Math.floor)))) d.vel.set(0, 0, 0);
+    else g.position.copy(next);
+    d.mesh.rotation.y += dt * 2;
+    d.mesh.position.y = 0.15 + Math.sin(d.age * 3) * 0.06;
+    const pick = d.age > 0.5 && dist < 0.6 && hp > 0, burnt = get(...g.position.toArray().map(Math.floor)) === LAVA;
+    if (pick) { inv[d.id] += d.n; drawInv(); }
+    if (pick || burnt) { scene.remove(g); d.mesh.geometry.dispose(); drops.splice(drops.indexOf(d), 1); }
+  }
 }
 
 function setTile(mesh, tiles) {
@@ -643,7 +715,7 @@ function drawCraft() {
   }));
 }
 
-const MENUS = ['craft', 'chest', 'cheat'];
+const MENUS = ['craft', 'chest', 'cheat', 'dead'];
 const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
@@ -659,6 +731,7 @@ function start() {
 
 function openMenu(name) {
   for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
+  if (!name && hp <= 0) { hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity; spawn(); }
   if (!name) return start();
   if (name === 'craft') drawCraft();
   if (name === 'chest') drawChest();
@@ -691,12 +764,13 @@ function drawChest() {
 function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
-  const wet = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)) === WATER;
+  const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = fluid === WATER, hot = fluid === LAVA;
   ambient.intensity = light * Math.PI;
   scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
+  if (hot) scene.background.set(HOT);
   scene.fog.color.copy(scene.background);
-  scene.fog.near = wet ? 1 : R * CS * 0.5;
-  scene.fog.far = wet ? 24 : R * CS;
+  scene.fog.near = hot ? 0.1 : wet ? 1 : R * CS * 0.5;
+  scene.fog.far = hot ? 2.5 : wet ? 24 : R * CS;
   sun.position.set(Math.cos(a), Math.sin(a), 0.3).multiplyScalar(400);
   moon.position.copy(sun.position).negate().add(c);
   sun.position.add(c);
@@ -741,6 +815,10 @@ function loop(t) {
   animateHand(r, dt);
   mine(r, dt);
   updateBits(dt);
+  updateDrops(dt);
+  drawHearts();
+  camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
+  camera.updateProjectionMatrix();
   lightTorches();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
@@ -793,10 +871,11 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time, hp }));
 $('.start').onclick = start;
 for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
 $('.instant').onchange = e => cheat.instant = e.target.checked;
+$('.god').onchange = e => cheat.god = e.target.checked;
 $('.xray').onchange = e => {
   cheat.xray = e.target.checked;
   for (const c of chunks.values()) if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; }
