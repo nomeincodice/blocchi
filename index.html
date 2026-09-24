@@ -2,51 +2,91 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Blocchi</title>
 <style>
-  :root { --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; }
-  body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); }
+  :root { --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); }
+  body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; }
   .cross { position: fixed; left: 50%; top: 50%; translate: -50% -50%; font-size: 26px; pointer-events: none; mix-blend-mode: difference; }
-  .info { position: fixed; top: 10px; left: 12px; text-shadow: 0 2px 3px #000; pointer-events: none; }
+  .info { position: fixed; top: 10px; left: var(--left); white-space: pre-line; text-shadow: 0 2px 3px #000; pointer-events: none; }
   .bar { position: fixed; left: 50%; bottom: 12px; translate: -50% 0; display: flex; gap: 6px; padding: 6px; background: var(--slot); }
   .bar div { width: var(--s); height: var(--s); display: flex; align-items: end; justify-content: end; font-size: 13px; text-shadow: 0 1px 2px #000; background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
   .bar .on { outline: 3px solid var(--pick); }
   .bar .none { opacity: 0.35; }
   .stack { display: grid; gap: 8px; }
-  .panel { position: fixed; inset: 0; place-content: center; text-align: center; background: var(--shade); }
-  .panel h1 { margin: 0; font-size: 64px; }
+  .cols { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); width: min(56rem, 90vw); }
+  .panel { position: fixed; inset: 0; place-content: center; justify-items: center; text-align: center; overflow: auto; background: var(--shade); }
+  .panel h1 { margin: 0; font-size: clamp(28px, 9vh, 64px); }
   .panel button { font: inherit; padding: 8px 16px; color: var(--hud); background: var(--slot); border: 2px solid var(--pick); cursor: pointer; }
   .panel button:disabled { opacity: 0.35; cursor: default; }
   .start { cursor: pointer; }
+  .rotate { display: none; }
+  .pad { position: fixed; right: var(--right); bottom: 12px; display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
+  .pad button { height: 60px; padding: 0; font-size: 26px; border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
+  .joy { position: fixed; width: 100px; height: 100px; translate: -50% -50%; border: 2px solid var(--pick); border-radius: 50%; pointer-events: none; }
+  @media (pointer: coarse) { :root { --s: 32px; } .mouse { display: none; } }
+  @media (pointer: coarse) and (orientation: portrait) { .rotate { display: grid; } }
+  @media not all and (pointer: coarse) { .touch { display: none; } }
 </style>
 </head>
 <body>
 <div class="cross">+</div>
 <div class="info"></div>
 <div class="bar"></div>
-<div class="panel stack start"><h1>Blocchi</h1><p>Clicca per giocare</p><p>WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting<br>Click sinistro rompi · Click destro piazza · 1-0 o rotella scegli blocco · Esc pausa</p></div>
-<div class="panel stack craft" style="display: none"><h1>Crafting</h1><div class="stack recipes"></div><p>E per chiudere</p></div>
+<div class="joy" style="display: none"></div>
+<div class="pad touch">
+  <button data-key="KeyE">🛠️</button><button data-key="KeyF">🕊️</button>
+  <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
+  <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
+</div>
+<div class="panel stack start"><h1>Blocchi</h1>
+  <p class="mouse">Clicca per giocare</p>
+  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting<br>Tieni premuto click sinistro per rompere · Click destro piazza · 1-0 o rotella scegli blocco · Esc pausa</p>
+  <p class="touch">Tocca per giocare</p>
+  <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting</p>
+</div>
+<div class="panel stack craft" style="display: none"><h1>Crafting</h1><div class="stack cols recipes"></div><button class="close">Chiudi</button></div>
+<div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
 
-const CS = 16, H = 64, R = 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, DAY = 600;
-const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11;
-const BLOCKS = [null, [0, 2, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 7], [8, 8, 8], [9, 9, 9], [10, 10, 10], [11, 11, 11], [12, 12, 12]];
-const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni'];
-const CLEAR = [LEAVES, GLASS, WATER];
+const touch = matchMedia('(pointer: coarse)').matches;
+const CS = 16, H = 64, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, DAY = 600;
+const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11, TORCH = 12;
+const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
+const BLOCKS = [null, [0, 2, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 7], [8, 8, 8], [9, 9, 9], [10, 10, 10], [11, 11, 11], [12, 12, 12], [13, 13, 13]];
+const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
+  'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra'];
+const HOTBAR = [GRASS, DIRT, STONE, COBBLE, SAND, LOG, PLANKS, LEAVES, GLASS, BRICKS, TORCH];
+const CLEAR = [LEAVES, GLASS, WATER, TORCH];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE };
+const TOOLS = { pick: [WPICK, SPICK], axe: [WAXE, SAXE], shovel: [WSHOVEL, SSHOVEL] };
+const HARD = {
+  [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [STONE]: [6, 'pick'], [COBBLE]: [8, 'pick'],
+  [BRICKS]: [8, 'pick'], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0],
+};
 const RECIPES = [
   [{ [LOG]: 1 }, PLANKS, 4],
+  [{ [PLANKS]: 2 }, STICK, 4],
+  [{ [STICK]: 1, [LOG]: 1 }, TORCH, 4],
   [{ [SAND]: 1 }, GLASS, 1],
   [{ [COBBLE]: 1 }, STONE, 1],
   [{ [DIRT]: 2, [SAND]: 2 }, BRICKS, 4],
   [{ [DIRT]: 1, [LEAVES]: 1 }, GRASS, 1],
+  [{ [PLANKS]: 3, [STICK]: 2 }, WPICK, 1],
+  [{ [PLANKS]: 3, [STICK]: 2 }, WAXE, 1],
+  [{ [PLANKS]: 1, [STICK]: 2 }, WSHOVEL, 1],
+  [{ [COBBLE]: 3, [STICK]: 2 }, SPICK, 1],
+  [{ [COBBLE]: 3, [STICK]: 2 }, SAXE, 1],
+  [{ [COBBLE]: 1, [STICK]: 2 }, SSHOVEL, 1],
 ];
-const solid = b => b && b !== WATER;
+const solid = b => b && b !== WATER && b !== TORCH;
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -69,6 +109,7 @@ const TILES = [
   (x, y) => x % 15 && y % 15 && x - y !== 3 ? [0, 0, 0, 0] : C.glass,
   (x, y) => y % 4 === 3 || (x + (y >> 2) % 2 * 4) % 8 === 7 ? jit(C.mortar, 0.04) : jit(C.brick),
   () => jit([48, 98, 190], 0.08),
+  (x, y) => y < 4 ? jit([255, 190, 70], 0.1) : jit([120, 85, 45]),
 ];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
@@ -131,10 +172,11 @@ function near(c, x, y, z) {
   return get(c.cx * CS + x, y, c.cz * CS + z);
 }
 
-function quad(m, [, shade, , corners], x, y, z, tile, layer) {
+function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1]) {
   const n = m.pos.length / 3;
   for (const [cx, cy, cz, u, v] of corners) {
-    m.pos.push(x + cx, y + cy, z + cz);
+    m.pos.push(x + cx * size[0], y + cy * size[1], z + cz * size[2]);
+    m.nor.push(...dir);
     m.uv.push((tile + 0.01 + u * 0.98) / TILES.length, v);
     m.col.push(shade, shade, shade);
   }
@@ -142,10 +184,15 @@ function quad(m, [, shade, , corners], x, y, z, tile, layer) {
 }
 
 function buildMesh(c) {
-  const m = { pos: [], uv: [], col: [], idx: [[], []] };
+  const m = { pos: [], nor: [], uv: [], col: [], idx: [[], [], []] };
+  c.torches = [];
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
-    if (!id) continue;
+    if (id === TORCH) {
+      c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 0.8, c.cz * CS + z + 0.5));
+      for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
+    }
+    if (!id || id === TORCH) continue;
     for (const f of FACES) {
       const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]);
       if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], +(id === WATER));
@@ -153,13 +200,13 @@ function buildMesh(c) {
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(m.nor, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(m.uv, 2));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(m.col, 3));
-  geo.setIndex(m.idx[0].concat(m.idx[1]));
-  geo.addGroup(0, m.idx[0].length, 0);
-  geo.addGroup(m.idx[0].length, m.idx[1].length, 1);
+  geo.setIndex(m.idx.flat());
+  m.idx.reduce((s, l, i) => (geo.addGroup(s, l.length, i), s + l.length), 0);
   if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); }
-  c.mesh = new THREE.Mesh(geo, [material, waterMat]);
+  c.mesh = new THREE.Mesh(geo, [material, waterMat, torchMat]);
   c.mesh.position.set(c.cx * CS, 0, c.cz * CS);
   scene.add(c.mesh);
 }
@@ -208,28 +255,33 @@ function paintAtlas() {
 const atlas = paintAtlas(), tex = new THREE.CanvasTexture(atlas);
 tex.magFilter = tex.minFilter = THREE.NearestFilter;
 tex.colorSpace = THREE.SRGBColorSpace;
-const material = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, alphaTest: 0.5 });
-const waterMat = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+const material = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, alphaTest: 0.5 });
+const waterMat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+const torchMat = new THREE.MeshBasicMaterial({ map: tex });
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(devicePixelRatio);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 document.body.prepend(renderer.domElement);
+const canvas = renderer.domElement;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, R * CS * 0.5, R * CS);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 1000);
 camera.rotation.order = 'YXZ';
 const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01, 1.01, 1.01)), new THREE.LineBasicMaterial({ color: '#000' }));
-scene.add(outline);
+const crack = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, depthWrite: false }));
 const sun = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshBasicMaterial({ color: '#fff4a0', fog: false }));
 const moon = new THREE.Mesh(sun.geometry, new THREE.MeshBasicMaterial({ color: '#dde4f0', fog: false }));
-scene.add(sun, moon);
+const ambient = new THREE.AmbientLight('#fff', Math.PI);
+const lamps = Array.from({ length: 6 }, () => new THREE.PointLight('#ffb060', 0, 12, 1));
+scene.add(outline, crack, sun, moon, ambient, ...lamps);
 const DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0 };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
-const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = saved?.inv ?? NAMES.map(() => 0);
-let slot = 0, time = saved?.time ?? DAY * 0.05;
+const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = NAMES.map((_, i) => saved?.inv[i] ?? 0);
+const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0 };
+let slot = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -250,7 +302,7 @@ function moveAxis(a, d) {
 }
 
 function update(dt) {
-  const p = player, f = key('KeyW') - key('KeyS'), s = key('KeyD') - key('KeyA'), len = Math.hypot(f, s) || 1;
+  const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   const swim = !p.fly && get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)) === WATER;
   const speed = (p.fly ? 11 : keys.ShiftLeft ? 5.6 : 4.3) * (swim ? 0.6 : 1);
   p.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed;
@@ -264,22 +316,46 @@ function update(dt) {
   for (let i = 0; i < steps; i++) for (const a of ['x', 'y', 'z']) moveAxis(a, p.vel[a] * dt / steps);
 }
 
+function look(dx, dy, k) {
+  player.yaw -= dx * k;
+  player.pitch = THREE.MathUtils.clamp(player.pitch - dy * k, -1.55, 1.55);
+}
+
 function raycast() {
   const o = camera.position.toArray(), d = camera.getWorldDirection(new THREE.Vector3()).toArray();
   const b = o.map(Math.floor), s = d.map(Math.sign), delta = d.map(v => Math.abs(1 / v));
   const tMax = o.map((v, i) => (s[i] > 0 ? b[i] + 1 - v : v - b[i]) * delta[i]);
   let prev = null;
   for (let t = 0; t <= REACH;) {
-    if (solid(get(...b))) return { hit: b, prev };
+    const id = get(...b);
+    if (id && id !== WATER) return { hit: b, prev };
     prev = [...b];
     const i = tMax.indexOf(Math.min(...tMax));
     b[i] += s[i]; t = tMax[i]; tMax[i] += delta[i];
   }
 }
 
-function place([x, y, z]) {
-  const p = player.pos, id = slot + 1;
-  if (!inv[id] || y >= H || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
+const tier = type => type ? TOOLS[type].findLastIndex(id => inv[id]) + 1 : 0;
+function digTime(id) {
+  const [t, type] = HARD[id], k = tier(type);
+  return type === 'pick' && !k ? Infinity : t / [1, 4, 8][k];
+}
+
+function mine(r, dt) {
+  const target = r && keys.Dig ? r.hit.join() : '';
+  mining.p = target && target === mining.target ? mining.p + dt / digTime(get(...r.hit)) : 0;
+  mining.target = target;
+  if (mining.p >= 1 && r.hit[1] > 0) { dig(r.hit); mining.p = 0; }
+  crack.visible = mining.p > 0;
+  crack.position.copy(outline.position);
+  crack.material.opacity = Math.min(1, mining.p) * 0.7;
+}
+
+function place() {
+  const r = raycast(), p = player.pos, id = HOTBAR[slot];
+  if (!r?.prev || !inv[id]) return;
+  const [x, y, z] = r.prev;
+  if (y >= H || id === TORCH && get(x, y, z) === WATER || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
   inv[id]--;
   set(x, y, z, id);
   drawBar();
@@ -299,9 +375,9 @@ function choose(i) {
 
 function drawBar() {
   [...$('.bar').children].forEach((d, i) => {
-    d.textContent = inv[i + 1];
+    d.textContent = inv[HOTBAR[i]];
     d.classList.toggle('on', i === slot);
-    d.classList.toggle('none', !inv[i + 1]);
+    d.classList.toggle('none', !inv[HOTBAR[i]]);
   });
 }
 
@@ -309,25 +385,39 @@ function drawCraft() {
   $('.recipes').replaceChildren(...RECIPES.map(([need, out, n]) => {
     const b = document.createElement('button');
     b.textContent = Object.entries(need).map(([id, k]) => `${k} ${NAMES[id]}`).join(' + ') + ` → ${n} ${NAMES[out]}`;
-    b.disabled = Object.entries(need).some(([id, k]) => inv[id] < k);
+    b.disabled = Object.entries(need).some(([id, k]) => inv[id] < k) || out >= WPICK && inv[out] > 0;
     b.onclick = () => { for (const [id, k] of Object.entries(need)) inv[id] -= k; inv[out] += n; drawBar(); drawCraft(); };
     return b;
   }));
 }
 
+const crafting = () => $('.craft').style.display !== 'none';
+
+function setPlaying(on) {
+  playing = on;
+  $('.start').style.display = on || crafting() ? 'none' : '';
+}
+
+function start() {
+  if (!touch) return document.body.requestPointerLock();
+  document.documentElement.requestFullscreen?.().then(() => screen.orientation.lock('landscape'));
+  setPlaying(true);
+}
+
 function toggleCraft() {
-  const open = $('.craft').style.display === 'none';
+  const open = !crafting();
   $('.craft').style.display = open ? '' : 'none';
-  $('.start').style.display = open ? 'none' : '';
-  if (open) { drawCraft(); document.exitPointerLock(); } else document.body.requestPointerLock();
+  if (!open) return start();
+  drawCraft();
+  setPlaying(false);
+  document.exitPointerLock?.();
 }
 
 function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
   const wet = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)) === WATER;
-  material.color.setScalar(light);
-  waterMat.color.setScalar(light);
+  ambient.intensity = light * Math.PI;
   scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
   scene.fog.color.copy(scene.background);
   scene.fog.near = wet ? 1 : R * CS * 0.5;
@@ -339,15 +429,30 @@ function sky(dt) {
   moon.lookAt(c);
 }
 
+function lightTorches() {
+  const p = player.pos, list = [...chunks.values()].flatMap(c => c.torches ?? []).sort((a, b) => a.distanceToSquared(p) - b.distanceToSquared(p));
+  lamps.forEach((l, i) => {
+    l.intensity = list[i] ? 5 : 0;
+    if (list[i]) l.position.copy(list[i]);
+  });
+}
+
+function hud(r) {
+  const p = player.pos, tools = Object.values(TOOLS).map(ids => NAMES[ids.findLast(id => inv[id])]).filter(Boolean);
+  const need = r && digTime(get(...r.hit)) === Infinity ? ' · serve un piccone' : '';
+  return `${NAMES[HOTBAR[slot]]} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}\n${tools.join(' · ')}`;
+}
+
 function spawn() {
-  let y = H;
-  while (!get(8, y - 1, 8)) y--;
-  player.pos.set(8.5, y, 8.5);
+  let x = 8, y = H;
+  while (height(x, 8) <= SEA) x += 4;
+  while (!get(x, y - 1, 8)) y--;
+  player.pos.set(x + 0.5, y, 8.5);
 }
 
 let last = performance.now();
 function loop(t) {
-  const p = player, dt = document.pointerLockElement ? Math.min(0.05, (t - last) / 1000) : 0;
+  const p = player, dt = playing ? Math.min(0.05, (t - last) / 1000) : 0;
   last = t;
   if (dt) update(dt);
   streamChunks();
@@ -357,7 +462,9 @@ function loop(t) {
   const r = raycast();
   outline.visible = !!r;
   if (r) outline.position.set(r.hit[0] + 0.5, r.hit[1] + 0.5, r.hit[2] + 0.5);
-  $('.info').textContent = `${NAMES[slot + 1]} · ${Math.floor(p.pos.x)} ${Math.floor(p.pos.y)} ${Math.floor(p.pos.z)}${p.fly ? ' · volo' : ''}`;
+  $('.info').textContent = hud(r);
+  mine(r, dt);
+  lightTorches();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
@@ -367,34 +474,54 @@ onkeydown = e => {
   if (/^Digit\d$/.test(e.code)) choose((+e.code[5] + 9) % 10);
   if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel.y = 0; }
   if (e.code === 'KeyE' && !e.repeat) toggleCraft();
+  if (e.code === 'Place' && playing) place();
 };
 onkeyup = e => keys[e.code] = false;
-onwheel = e => choose((slot + Math.sign(e.deltaY) + 10) % 10);
-onmousemove = e => {
-  if (!document.pointerLockElement) return;
-  player.yaw -= e.movementX * 0.002;
-  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.002));
+onwheel = e => choose((slot + Math.sign(e.deltaY) + HOTBAR.length) % HOTBAR.length);
+onmousemove = e => { if (document.pointerLockElement) look(e.movementX, e.movementY, 0.002); };
+onpointerdown = e => {
+  if (!playing || e.pointerType === 'touch') return;
+  if (e.button === 0) keys.Dig = true;
+  if (e.button === 2) place();
 };
-onmousedown = e => {
-  const r = document.pointerLockElement && raycast();
-  if (!r) return;
-  if (e.button === 0 && r.hit[1] > 0) dig(r.hit);
-  if (e.button === 2 && r.prev) place(r.prev);
+onpointerup = e => { if (e.pointerType !== 'touch') keys.Dig = false; };
+canvas.onpointerdown = e => {
+  if (e.pointerType !== 'touch') return;
+  const move = e.clientX < innerWidth / 2;
+  drags.set(e.pointerId, { x: e.clientX, y: e.clientY, move });
+  if (move) Object.assign($('.joy').style, { display: '', left: e.clientX + 'px', top: e.clientY + 'px' });
 };
+canvas.onpointermove = e => {
+  const d = drags.get(e.pointerId);
+  if (!d) return;
+  if (d.move) { joy.x = THREE.MathUtils.clamp((e.clientX - d.x) / 50, -1, 1); joy.y = THREE.MathUtils.clamp((e.clientY - d.y) / 50, -1, 1); return; }
+  look(e.clientX - d.x, e.clientY - d.y, 0.006);
+  d.x = e.clientX; d.y = e.clientY;
+};
+canvas.onpointerup = canvas.onpointercancel = e => {
+  if (drags.get(e.pointerId)?.move) { joy.x = joy.y = 0; $('.joy').style.display = 'none'; }
+  drags.delete(e.pointerId);
+};
+for (const b of document.querySelectorAll('.pad button')) {
+  b.onpointerdown = () => onkeydown({ code: b.dataset.key });
+  b.onpointerup = b.onpointercancel = () => onkeyup({ code: b.dataset.key });
+}
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-onbeforeunload = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time }));
-$('.start').onclick = () => document.body.requestPointerLock();
-document.onpointerlockchange = () => $('.start').style.display = document.pointerLockElement || $('.craft').style.display !== 'none' ? 'none' : '';
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time }));
+$('.start').onclick = start;
+$('.close').onclick = toggleCraft;
+document.onpointerlockchange = () => setPlaying(!!document.pointerLockElement);
 
 const bar = $('.bar');
 bar.style.setProperty('--n', TILES.length);
 bar.style.setProperty('--img', `url(${atlas.toDataURL()})`);
-for (let id = 1; id < NAMES.length; id++) {
+HOTBAR.forEach((id, i) => {
   const d = document.createElement('div');
   d.style.setProperty('--t', BLOCKS[id][2]);
+  d.onclick = () => choose(i);
   bar.append(d);
-}
+});
 choose(0);
 if (saved) player.pos.fromArray(saved.pos); else spawn();
 requestAnimationFrame(loop);
