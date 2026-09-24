@@ -7,34 +7,55 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>Blocchi</title>
 <style>
-  :root { --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); }
+  :root {
+    --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --pad: 60px;
+    --gui: #c6c6c6; --gui-hi: #fff; --gui-lo: #555; --gui-slot: #8b8b8b; --gui-hover: #d8d8e8; --ink: #3f3f3f; --edge: #000;
+    --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); --bottom: max(12px, env(safe-area-inset-bottom));
+  }
   body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; }
   .cross { position: fixed; left: 50%; top: 50%; translate: -50% -50%; font-size: 26px; pointer-events: none; mix-blend-mode: difference; }
-  .info { position: fixed; top: 10px; left: var(--left); white-space: pre-line; text-shadow: 0 2px 3px #000; pointer-events: none; }
-  .bar { position: fixed; left: 50%; bottom: 12px; translate: -50% 0; display: flex; gap: 6px; padding: 6px; background: var(--slot); }
-  .bar div { width: var(--s); height: var(--s); display: flex; align-items: end; justify-content: end; font-size: 13px; text-shadow: 0 1px 2px #000; background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
-  .bar .on { outline: 3px solid var(--pick); }
-  .bar .none { opacity: 0.35; }
+  .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: var(--left); justify-items: start; text-shadow: 0 2px 3px var(--edge); pointer-events: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
+  .tools { --s: 28px; justify-content: start; }
+  .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
+  .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; background: var(--slot); }
+  .bar:empty { display: none; }
+  .bar .on { outline: 3px solid var(--pick); outline-offset: -3px; }
   .stack { display: grid; gap: 8px; }
-  .cols { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); width: min(56rem, 90vw); }
+  .cols { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); width: min(60rem, 86vw); }
   .panel { position: fixed; inset: 0; place-content: center; justify-items: center; text-align: center; overflow: auto; background: var(--shade); }
   .panel h1 { margin: 0; font-size: clamp(28px, 9vh, 64px); }
-  .panel button { font: inherit; padding: 8px 16px; color: var(--hud); background: var(--slot); border: 2px solid var(--pick); cursor: pointer; }
-  .panel button:disabled { opacity: 0.35; cursor: default; }
+  .btn { font: inherit; padding: 8px 16px; color: var(--hud); background: var(--slot); border: 2px solid var(--pick); cursor: pointer; }
+  .gui { padding: 16px; justify-items: center; max-height: 88vh; overflow: auto; color: var(--ink); background: var(--gui); border: 3px solid var(--edge); box-shadow: inset 3px 3px var(--gui-hi), inset -3px -3px var(--gui-lo); }
+  .gui h2 { margin: 0 auto; }
+  .head { justify-self: stretch; }
+  .gui .close { padding: 4px 12px; color: var(--ink); background: var(--gui); border-color: var(--edge); }
+  .gui .icon { --s: 32px; }
+  .slot { padding: 3px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo), inset -2px -2px var(--gui-hi); }
+  .inv:empty { display: none; }
+  .recipe { display: grid; gap: 4px; justify-items: center; padding: 8px; font: inherit; font-size: 13px; color: var(--ink); background: var(--gui); border: 2px solid var(--edge); box-shadow: inset 2px 2px var(--gui-hi), inset -2px -2px var(--gui-lo); cursor: pointer; }
+  .recipe:hover:enabled { background: var(--gui-hover); }
+  .recipe:disabled { opacity: 0.45; cursor: default; }
   .start { cursor: pointer; }
   .rotate { display: none; }
-  .pad { position: fixed; right: var(--right); bottom: 12px; display: grid; grid-template-columns: repeat(2, 60px); gap: 10px; }
-  .pad button { height: 60px; padding: 0; font-size: 26px; border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
+  .pad { position: fixed; right: var(--right); bottom: var(--bottom); display: grid; grid-template-columns: repeat(2, var(--pad)); gap: 10px; }
+  .pad button { height: var(--pad); padding: 0; font-size: calc(var(--pad) * 0.42); border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
   .joy { position: fixed; width: 100px; height: 100px; translate: -50% -50%; border: 2px solid var(--pick); border-radius: 50%; pointer-events: none; }
-  @media (pointer: coarse) { :root { --s: 32px; } .mouse { display: none; } }
+  @media (pointer: coarse) {
+    :root { --s: 34px; }
+    .mouse { display: none; }
+    .bar { left: var(--left); translate: none; max-width: calc(100vw - var(--left) - var(--right) - 2 * var(--pad) - 30px); }
+    .hud { font-size: 13px; }
+  }
+  @media (pointer: coarse) and (max-height: 420px) { :root { --pad: 52px; --s: 30px; } }
   @media (pointer: coarse) and (orientation: portrait) { .rotate { display: grid; } }
   @media not all and (pointer: coarse) { .touch { display: none; } }
 </style>
 </head>
 <body>
 <div class="cross">+</div>
-<div class="info"></div>
+<div class="hud stack"><div class="info"></div><div class="row tools"></div></div>
 <div class="bar"></div>
 <div class="joy" style="display: none"></div>
 <div class="pad touch">
@@ -44,11 +65,13 @@
 </div>
 <div class="panel stack start"><h1>Blocchi</h1>
   <p class="mouse">Clicca per giocare</p>
-  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting<br>Tieni premuto click sinistro per rompere · Click destro piazza · 1-0 o rotella scegli blocco · Esc pausa</p>
+  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting<br>Tieni premuto click sinistro per rompere · Click destro piazza · 1-9 o rotella scegli blocco · Esc pausa</p>
   <p class="touch">Tocca per giocare</p>
   <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting</p>
 </div>
-<div class="panel stack craft" style="display: none"><h1>Crafting</h1><div class="stack cols recipes"></div><button class="close">Chiudi</button></div>
+<div class="panel stack craft" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Crafting</h2><button class="btn close">✕</button></div><div class="row inv"></div><div class="stack cols recipes"></div></div>
+</div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
@@ -60,41 +83,78 @@ const touch = matchMedia('(pointer: coarse)').matches;
 const CS = 16, H = 64, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, DAY = 600;
 const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11, TORCH = 12;
 const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
-const BLOCKS = [null, [0, 2, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 7], [8, 8, 8], [9, 9, 9], [10, 10, 10], [11, 11, 11], [12, 12, 12], [13, 13, 13]];
+const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
+const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32;
+const BLOCKS = {
+  [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
+  [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
+  [SNOW]: [15, 2, 16], [COAL_ORE]: [17, 17, 17], [IRON_ORE]: [18, 18, 18], [STONEBRICK]: [19, 19, 19], [BOOKSHELF]: [8, 8, 20],
+  [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23],
+};
+const ITEM_TILE = {
+  [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
+  [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35,
+};
 const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
-  'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra'];
-const HOTBAR = [GRASS, DIRT, STONE, COBBLE, SAND, LOG, PLANKS, LEAVES, GLASS, BRICKS, TORCH];
+  'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra',
+  'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
+  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro'];
+const IDS = NAMES.map((_, id) => id);
+const PLACEABLE = IDS.filter(id => BLOCKS[id] && id !== WATER);
+const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
 const CLEAR = [LEAVES, GLASS, WATER, TORCH];
-const DROP = { [GRASS]: DIRT, [STONE]: COBBLE };
-const TOOLS = { pick: [WPICK, SPICK], axe: [WAXE, SAXE], shovel: [WSHOVEL, SSHOVEL] };
+const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL };
+const TOOLS = { pick: [WPICK, SPICK, IPICK], axe: [WAXE, SAXE, IAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL] };
+const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12];
 const HARD = {
-  [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [STONE]: [6, 'pick'], [COBBLE]: [8, 'pick'],
-  [BRICKS]: [8, 'pick'], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0],
+  [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [GRAVEL]: [0.9, 'shovel'], [SNOW]: [0.5, 'shovel'],
+  [STONE]: [6, 'pick', 1], [COBBLE]: [8, 'pick', 1], [BRICKS]: [8, 'pick', 1], [STONEBRICK]: [7, 'pick', 1],
+  [COAL_ORE]: [7, 'pick', 1], [IRON_ORE]: [7, 'pick', 2], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [BOOKSHELF]: [2, 'axe'],
+  [TABLE]: [3, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], [LAMP]: [0.5],
 };
 const RECIPES = [
   [{ [LOG]: 1 }, PLANKS, 4],
   [{ [PLANKS]: 2 }, STICK, 4],
-  [{ [STICK]: 1, [LOG]: 1 }, TORCH, 4],
-  [{ [SAND]: 1 }, GLASS, 1],
-  [{ [COBBLE]: 1 }, STONE, 1],
-  [{ [DIRT]: 2, [SAND]: 2 }, BRICKS, 4],
-  [{ [DIRT]: 1, [LEAVES]: 1 }, GRASS, 1],
+  [{ [PLANKS]: 4 }, TABLE, 1],
+  [{ [STICK]: 1, [COAL]: 1 }, TORCH, 4],
+  [{ [STICK]: 1, [LOG]: 1 }, TORCH, 2],
   [{ [PLANKS]: 3, [STICK]: 2 }, WPICK, 1],
   [{ [PLANKS]: 3, [STICK]: 2 }, WAXE, 1],
   [{ [PLANKS]: 1, [STICK]: 2 }, WSHOVEL, 1],
   [{ [COBBLE]: 3, [STICK]: 2 }, SPICK, 1],
   [{ [COBBLE]: 3, [STICK]: 2 }, SAXE, 1],
   [{ [COBBLE]: 1, [STICK]: 2 }, SSHOVEL, 1],
+  [{ [IRON_ORE]: 1, [COAL]: 1 }, IRON, 1],
+  [{ [IRON]: 3, [STICK]: 2 }, IPICK, 1],
+  [{ [IRON]: 3, [STICK]: 2 }, IAXE, 1],
+  [{ [IRON]: 1, [STICK]: 2 }, ISHOVEL, 1],
+  [{ [SAND]: 1 }, GLASS, 1],
+  [{ [COBBLE]: 1 }, STONE, 1],
+  [{ [STONE]: 4 }, STONEBRICK, 4],
+  [{ [DIRT]: 2, [SAND]: 2 }, BRICKS, 4],
+  [{ [DIRT]: 1, [LEAVES]: 1 }, GRASS, 1],
+  [{ [PLANKS]: 6 }, BOOKSHELF, 1],
+  [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
 ];
 const solid = b => b && b !== WATER && b !== TORCH;
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
 const dim = (c, k) => c.map(v => v * k);
+const NONE = [0, 0, 0, 0];
 const C = {
   grass: [95, 159, 53], dirt: [134, 96, 67], stone: [128, 128, 128], sand: [219, 207, 163], bark: [102, 81, 49],
   wood: [176, 140, 86], leaf: [58, 125, 38], brick: [150, 72, 56], mortar: [185, 178, 165], glass: [215, 238, 245],
+  snow: [240, 246, 252], flame: [255, 190, 70], iron: [200, 200, 205],
 };
+const BOOKS = [[150, 40, 40], [40, 70, 140], [60, 120, 50], [160, 120, 40], [100, 50, 120]];
+const TOOL = [[150, 110, 60], [140, 140, 140], [225, 225, 230]];
+const handle = (x, y) => (x + y === 15 || x + y === 16) && x > 1 && x < 13;
+const HEADS = [
+  (x, y) => { const d = Math.hypot(x - 2, 13 - y); return d >= 11.5 && d < 13.5 && x >= 5 && y <= 10; },
+  (x, y) => x >= 6 && x <= 11 && y >= 1 && y <= 6 && x + y >= 9 && x + y <= 14,
+  (x, y) => Math.hypot(x - 11.5, y - 3.5) < 3.2,
+];
 const TILES = [
   () => jit(C.grass, 0.2),
   (x, y) => y < 3 || y < 5 && rnd() < 0.5 ? jit(C.grass, 0.2) : jit(C.dirt),
@@ -105,11 +165,26 @@ const TILES = [
   (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return d > 6.5 ? jit(C.bark) : jit(dim(C.wood, (d | 0) % 2 ? 0.85 : 1)); },
   x => jit(dim(C.bark, x % 4 ? 1 : 0.7)),
   (x, y) => jit(dim(C.wood, y % 4 === 3 || x === (y >> 2) * 5 % 16 ? 0.7 : 1), 0.05),
-  () => rnd() < 0.2 ? [0, 0, 0, 0] : jit(C.leaf, 0.25),
-  (x, y) => x % 15 && y % 15 && x - y !== 3 ? [0, 0, 0, 0] : C.glass,
+  () => rnd() < 0.2 ? NONE : jit(C.leaf, 0.25),
+  (x, y) => x % 15 && y % 15 && x - y !== 3 ? NONE : C.glass,
   (x, y) => y % 4 === 3 || (x + (y >> 2) % 2 * 4) % 8 === 7 ? jit(C.mortar, 0.04) : jit(C.brick),
   () => jit([48, 98, 190], 0.08),
-  (x, y) => y < 4 ? jit([255, 190, 70], 0.1) : jit([120, 85, 45]),
+  (x, y) => y < 4 ? jit(C.flame, 0.1) : jit([120, 85, 45]),
+  () => jit(rnd() < 0.5 ? [136, 126, 120] : [105, 98, 95], 0.12),
+  () => jit(C.snow, 0.03),
+  (x, y) => y < 3 || y < 5 && rnd() < 0.5 ? jit(C.snow, 0.03) : jit(C.dirt),
+  (x, y) => (x * 5 + y * 3) % 7 === 0 && (x + y) % 3 ? jit([35, 35, 35]) : jit(C.stone),
+  (x, y) => (x * 3 + y * 5) % 7 === 0 && (x + y) % 3 ? jit([216, 175, 147]) : jit(C.stone),
+  (x, y) => y % 8 === 7 || (x + (y >> 3) % 2 * 8) % 16 === 15 ? jit(dim(C.stone, 0.6)) : jit(dim(C.stone, y % 8 ? 1 : 1.15), 0.06),
+  (x, y) => y < 2 || y > 13 || y === 7 || y === 8 ? jit(C.wood, 0.05) : jit(dim(BOOKS[(x >> 1) % 5], x % 2 ? 0.8 : 1), 0.05),
+  (x, y) => jit(dim(C.wood, x % 5 === 0 || y % 5 === 0 ? 0.7 : 1), 0.05),
+  (x, y) => jit(dim(C.wood, y < 3 ? 0.75 : x % 8 === 2 ? 0.7 : 0.95), 0.05),
+  (x, y) => x % 15 && y % 15 ? jit(x === 7 || y === 7 ? [255, 240, 180] : [250, 200, 90], 0.08) : [90, 60, 30],
+  (x, y) => handle(x, y) ? jit(C.bark) : NONE,
+  (x, y) => Math.hypot(x - 8, y - 8) < 5 ? jit([45, 45, 50], 0.3) : NONE,
+  (x, y) => y >= 6 && y <= 10 && x >= 4 - (y - 6 >> 1) && x <= 11 + (y - 6 >> 1) ? (y === 6 ? [245, 245, 250] : jit(C.iron, 0.05)) : NONE,
+  ...HEADS.flatMap(head => TOOL.map(m => (x, y) => head(x, y) ? jit(m, 0.08) : handle(x, y) ? jit(C.bark) : NONE)),
+  (x, y) => x >= 7 && x <= 8 && y >= 4 ? jit([120, 85, 45]) : x >= 6 && x <= 9 && y >= 1 && y < 4 ? jit(C.flame, 0.1) : NONE,
 ];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
@@ -142,12 +217,18 @@ function tree(d, x, y, z) {
   for (let i = 0; i < h; i++) d[at(x, y + i, z)] = LOG;
 }
 
+function ore(x, y, z) {
+  const k = hash((x >> 1) + (y >> 1) * 7919, z >> 1);
+  return k < 0.025 ? COAL_ORE : k < 0.035 && y < 28 ? IRON_ORE : STONE;
+}
+
 function generate(cx, cz) {
   const d = new Uint8Array(CS * CS * H);
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
     const wx = cx * CS + x, wz = cz * CS + z, h = height(wx, wz);
-    const top = h < 22 ? SAND : h > 42 ? STONE : GRASS, under = top === GRASS ? DIRT : top;
-    for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : STONE;
+    const top = h <= SEA - 3 && noise(wx / 8 + 50, wz / 8) > 0.6 ? GRAVEL : h < 22 ? SAND : h > 42 ? SNOW : h > 38 ? STONE : GRASS;
+    const under = top === GRASS || top === SNOW ? DIRT : top;
+    for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
     if (top === GRASS && x > 1 && x < 14 && z > 1 && z < 14 && hash(wx, wz + 7777) < 0.015) tree(d, x, h + 1, z);
   }
@@ -188,14 +269,12 @@ function buildMesh(c) {
   c.torches = [];
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
-    if (id === TORCH) {
-      c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 0.8, c.cz * CS + z + 0.5));
-      for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
-    }
+    if (id === TORCH || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
+    if (id === TORCH) for (const f of FACES) quad(m, f, x + 0.4375, y, z + 0.4375, 13, 2, [0.125, 0.625, 0.125]);
     if (!id || id === TORCH) continue;
     for (const f of FACES) {
       const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]);
-      if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], +(id === WATER));
+      if (!n || CLEAR.includes(n) && n !== id) quad(m, f, x, y, z, BLOCKS[id][f[2]], id === WATER ? 1 : id === LAMP ? 2 : 0);
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -274,14 +353,27 @@ const sun = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshBasicM
 const moon = new THREE.Mesh(sun.geometry, new THREE.MeshBasicMaterial({ color: '#dde4f0', fog: false }));
 const ambient = new THREE.AmbientLight('#fff', Math.PI);
 const lamps = Array.from({ length: 6 }, () => new THREE.PointLight('#ffb060', 0, 12, 1));
-scene.add(outline, crack, sun, moon, ambient, ...lamps);
+scene.add(outline, crack, sun, moon, ambient, camera, ...lamps);
 const DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
+
+const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
+const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.3), new THREE.MeshLambertMaterial({ color: '#d9a066', depthTest: false }));
+const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), heldMat);
+const flat = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), heldMat);
+const hand = new THREE.Group();
+fist.rotation.set(0.35, -0.25, 0);
+cube.rotation.set(0.2, 0.7, 0);
+flat.rotation.set(0, -1.1, 0.25);
+for (const o of [fist, cube, flat]) o.renderOrder = 10;
+hand.add(fist, cube, flat);
+hand.position.set(touch ? 0.2 : 0.34, -0.3, -0.6);
+camera.add(hand);
 
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0 };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
-const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = NAMES.map((_, i) => saved?.inv[i] ?? 0);
+const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = IDS.map(i => saved?.inv[i] ?? 0);
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0 };
-let slot = 0, time = saved?.time ?? DAY * 0.05, playing = false;
+let sel = 0, held = -1, swing = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -337,8 +429,8 @@ function raycast() {
 
 const tier = type => type ? TOOLS[type].findLastIndex(id => inv[id]) + 1 : 0;
 function digTime(id) {
-  const [t, type] = HARD[id], k = tier(type);
-  return type === 'pick' && !k ? Infinity : t / [1, 4, 8][k];
+  const [t, type, min = 0] = HARD[id], k = tier(type);
+  return k < min ? Infinity : t / SPEED[k];
 }
 
 function mine(r, dt) {
@@ -352,41 +444,94 @@ function mine(r, dt) {
 }
 
 function place() {
-  const r = raycast(), p = player.pos, id = HOTBAR[slot];
+  const r = raycast(), p = player.pos, id = sel;
   if (!r?.prev || !inv[id]) return;
   const [x, y, z] = r.prev;
   if (y >= H || id === TORCH && get(x, y, z) === WATER || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
   inv[id]--;
+  swing ||= 0.01;
   set(x, y, z, id);
-  drawBar();
+  drawInv();
 }
 
 function dig([x, y, z]) {
   const id = get(x, y, z), wet = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === WATER);
   inv[DROP[id] ?? id]++;
   set(x, y, z, wet ? WATER : AIR);
-  drawBar();
+  drawInv();
 }
 
-function choose(i) {
-  slot = i;
-  drawBar();
+function setTile(mesh, tiles) {
+  const uv = mesh.geometry.attributes.uv, base = mesh.userData.base ??= uv.array.slice();
+  for (let i = 0; i < uv.count; i++) uv.setX(i, (tiles[i >> 2] + 0.01 + base[i * 2] * 0.98) / TILES.length);
+  uv.needsUpdate = true;
 }
 
-function drawBar() {
-  [...$('.bar').children].forEach((d, i) => {
-    d.textContent = inv[HOTBAR[i]];
-    d.classList.toggle('on', i === slot);
-    d.classList.toggle('none', !inv[HOTBAR[i]]);
-  });
+function hold(id) {
+  const [top, bottom, side] = BLOCKS[id] ?? [], sprite = !BLOCKS[id] || id === TORCH;
+  held = id;
+  fist.visible = !id;
+  cube.visible = !!id && !sprite;
+  flat.visible = !!id && sprite;
+  if (cube.visible) setTile(cube, [side, side, top, bottom, side, side]);
+  if (flat.visible) setTile(flat, [ICON[id]]);
+}
+
+function animateHand(r, dt) {
+  const digging = !!(keys.Dig && r), type = digging && HARD[get(...r.hit)]?.[1];
+  const show = digging ? (type && TOOLS[type].findLast(id => inv[id])) || 0 : sel;
+  if (show !== held) hold(show);
+  if (digging || swing > 0) swing += dt * 12;
+  if (swing > Math.PI) swing = digging ? swing - Math.PI : 0;
+  const s = Math.sin(swing);
+  hand.rotation.set(-s * 0.9, s * 0.35, s * 0.15);
+  hand.position.y = -0.3 + s * 0.06;
+}
+
+const owned = () => PLACEABLE.filter(id => inv[id] > 0);
+
+function icon(id, n) {
+  const d = document.createElement('div');
+  d.className = 'icon';
+  d.style.setProperty('--t', ICON[id]);
+  d.textContent = n ?? '';
+  d.title = NAMES[id];
+  return d;
+}
+
+function slot(id, n) {
+  const s = document.createElement('div');
+  s.className = 'slot';
+  s.append(icon(id, n));
+  return s;
+}
+
+function choose(id) {
+  sel = id;
+  drawInv();
+}
+
+function drawInv() {
+  if (!inv[sel]) sel = owned()[0] ?? 0;
+  $('.bar').replaceChildren(...owned().map(id => {
+    const d = icon(id, inv[id]);
+    d.classList.toggle('on', id === sel);
+    d.onclick = () => choose(id);
+    return d;
+  }));
+  $('.tools').replaceChildren(...Object.values(TOOLS).map(ids => ids.findLast(id => inv[id])).filter(Boolean).map(id => icon(id)));
+  $('.inv').replaceChildren(...IDS.filter(id => inv[id] > 0).map(id => slot(id, inv[id])));
 }
 
 function drawCraft() {
   $('.recipes').replaceChildren(...RECIPES.map(([need, out, n]) => {
-    const b = document.createElement('button');
-    b.textContent = Object.entries(need).map(([id, k]) => `${k} ${NAMES[id]}`).join(' + ') + ` → ${n} ${NAMES[out]}`;
-    b.disabled = Object.entries(need).some(([id, k]) => inv[id] < k) || out >= WPICK && inv[out] > 0;
-    b.onclick = () => { for (const [id, k] of Object.entries(need)) inv[id] -= k; inv[out] += n; drawBar(); drawCraft(); };
+    const b = document.createElement('button'), row = document.createElement('div');
+    b.className = 'recipe';
+    row.className = 'row';
+    row.append(...Object.entries(need).map(([id, k]) => slot(id, k)), '→', slot(out, n));
+    b.append(row, NAMES[out]);
+    b.disabled = Object.entries(need).some(([id, k]) => inv[id] < k) || TOOL_IDS.includes(out) && inv[out] > 0;
+    b.onclick = () => { for (const [id, k] of Object.entries(need)) inv[id] -= k; inv[out] += n; drawInv(); drawCraft(); };
     return b;
   }));
 }
@@ -438,9 +583,9 @@ function lightTorches() {
 }
 
 function hud(r) {
-  const p = player.pos, tools = Object.values(TOOLS).map(ids => NAMES[ids.findLast(id => inv[id])]).filter(Boolean);
-  const need = r && digTime(get(...r.hit)) === Infinity ? ' · serve un piccone' : '';
-  return `${NAMES[HOTBAR[slot]]} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}\n${tools.join(' · ')}`;
+  const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
+  const need = tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
+  return `${NAMES[sel] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}`;
 }
 
 function spawn() {
@@ -463,6 +608,7 @@ function loop(t) {
   outline.visible = !!r;
   if (r) outline.position.set(r.hit[0] + 0.5, r.hit[1] + 0.5, r.hit[2] + 0.5);
   $('.info').textContent = hud(r);
+  animateHand(r, dt);
   mine(r, dt);
   lightTorches();
   renderer.render(scene, camera);
@@ -471,13 +617,16 @@ function loop(t) {
 
 onkeydown = e => {
   keys[e.code] = true;
-  if (/^Digit\d$/.test(e.code)) choose((+e.code[5] + 9) % 10);
+  if (/^Digit[1-9]$/.test(e.code)) choose(owned()[e.code[5] - 1] ?? sel);
   if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel.y = 0; }
   if (e.code === 'KeyE' && !e.repeat) toggleCraft();
   if (e.code === 'Place' && playing) place();
 };
 onkeyup = e => keys[e.code] = false;
-onwheel = e => choose((slot + Math.sign(e.deltaY) + HOTBAR.length) % HOTBAR.length);
+onwheel = e => {
+  const own = owned(), i = own.indexOf(sel) + Math.sign(e.deltaY);
+  choose(own[(i + own.length) % own.length] ?? 0);
+};
 onmousemove = e => { if (document.pointerLockElement) look(e.movementX, e.movementY, 0.002); };
 onpointerdown = e => {
   if (!playing || e.pointerType === 'touch') return;
@@ -513,16 +662,9 @@ $('.start').onclick = start;
 $('.close').onclick = toggleCraft;
 document.onpointerlockchange = () => setPlaying(!!document.pointerLockElement);
 
-const bar = $('.bar');
-bar.style.setProperty('--n', TILES.length);
-bar.style.setProperty('--img', `url(${atlas.toDataURL()})`);
-HOTBAR.forEach((id, i) => {
-  const d = document.createElement('div');
-  d.style.setProperty('--t', BLOCKS[id][2]);
-  d.onclick = () => choose(i);
-  bar.append(d);
-});
-choose(0);
+document.body.style.setProperty('--n', TILES.length);
+document.body.style.setProperty('--img', `url(${atlas.toDataURL()})`);
+drawInv();
 if (saved) player.pos.fromArray(saved.pos); else spawn();
 requestAnimationFrame(loop);
 </script>
