@@ -109,6 +109,7 @@ const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SS
 const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
 const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33, LAVA = 34;
 const WALL = { 35: [1, 0], 36: [-1, 0], 37: [0, 1], 38: [0, -1] }, TORCHES = [TORCH, 35, 36, 37, 38];
+const DOOR = 39, DOORS = Array.from({ length: 16 }, (_, i) => 40 + i), isDoor = b => b >= 40 && b < 56;
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
@@ -119,25 +120,27 @@ const BLOCKS = {
 const FLUID = [WATER, LAVA];
 const ITEM_TILE = {
   [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
-  [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35,
+  [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35, [DOOR]: 44,
 };
 const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', 'Assi', 'Foglie', 'Vetro', 'Mattoni', 'Acqua', 'Torcia',
   'Bastoni', 'Piccone di legno', 'Piccone di pietra', 'Ascia di legno', 'Ascia di pietra', 'Pala di legno', 'Pala di pietra',
   'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
-  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia'];
+  'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia', 'Porta', ...DOORS.map(() => 'Porta')];
+for (const d of DOORS) BLOCKS[d] = [42, 42, 42];
 const IDS = NAMES.map((_, id) => id);
-const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id]);
+const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
-const CLEAR = [LEAVES, GLASS, WATER, ...TORCHES];
+const CLEAR = [LEAVES, GLASS, WATER, ...TORCHES, ...DOORS];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
 const TOOLS = { pick: [WPICK, SPICK, IPICK], axe: [WAXE, SAXE, IAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL] };
-const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12], HOTBAR = [...TOOL_IDS, ...PLACEABLE];
+const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12], HOTBAR = [...TOOL_IDS, ...PLACEABLE, DOOR];
 const HARD = {
   [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [GRAVEL]: [0.9, 'shovel'], [SNOW]: [0.5, 'shovel'],
   [STONE]: [6, 'pick', 1], [COBBLE]: [8, 'pick', 1], [BRICKS]: [8, 'pick', 1], [STONEBRICK]: [7, 'pick', 1],
   [COAL_ORE]: [7, 'pick', 1], [IRON_ORE]: [7, 'pick', 2], [LOG]: [3, 'axe'], [PLANKS]: [3, 'axe'], [BOOKSHELF]: [2, 'axe'],
   [TABLE]: [3, 'axe'], [CHEST]: [2, 'axe'], [LEAVES]: [0.3], [GLASS]: [0.45], [TORCH]: [0], 35: [0], 36: [0], 37: [0], 38: [0], [LAMP]: [0.5],
 };
+for (const d of DOORS) HARD[d] = [3, 'axe'];
 const RECIPES = [
   [{ [LOG]: 1 }, PLANKS, 4],
   [{ [PLANKS]: 2 }, STICK, 4],
@@ -162,8 +165,9 @@ const RECIPES = [
   [{ [PLANKS]: 6 }, BOOKSHELF, 1],
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
   [{ [PLANKS]: 8 }, CHEST, 1],
+  [{ [PLANKS]: 6 }, DOOR, 3],
 ];
-const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b);
+const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !(isDoor(b) && b - 40 & 4);
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, CHEST];
 const cheat = { xray: false, instant: false, god: false };
@@ -218,6 +222,11 @@ const TILES = [
   (x, y) => jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
   (x, y) => y === 5 ? jit(dim(C.wood, 0.45)) : x >= 7 && x <= 8 && y >= 4 && y <= 7 ? jit([200, 200, 205]) : jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
   () => jit(rnd() < 0.3 ? [255, 200, 60] : [225, 90, 20], 0.12),
+  () => jit([196, 140, 100], 0.05),
+  () => jit([0, 165, 165], 0.08),
+  (x, y) => x === 12 && y === 2 ? [60, 60, 60] : jit(dim(C.wood, x % 15 && y % 15 && x !== 7 ? 0.95 : 0.65), 0.05),
+  (x, y) => x > 2 && x < 13 && y > 2 && y < 9 && x !== 7 && y !== 5 ? NONE : jit(dim(C.wood, x % 15 && y % 15 && x !== 7 ? 0.95 : 0.65), 0.05),
+  (x, y) => x < 4 || x > 11 || y > 1 && y < 6 && x > 4 && x < 11 ? NONE : jit(dim(C.wood, x === 4 || x === 11 || y === 0 || y === 15 || y === 8 ? 0.65 : 0.95), 0.05),
 ];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
@@ -336,7 +345,11 @@ function buildMesh(c) {
       const [dx, dz] = WALL[id] ?? [0, 0];
       for (const f of FACES) quad(m, f, x + 0.4375 - dx * 0.4, y + (dx || dz ? 0.2 : 0), z + 0.4375 - dz * 0.4, 13, 2, [0.125, 0.625, 0.125], undefined, 1, [dx * 0.3, dz * 0.3]);
     }
-    if (!id || TORCHES.includes(id) || cheat.xray && !XRAY.includes(id)) continue;
+    if (isDoor(id) && !cheat.xray) {
+      const k = id - 40, T = 0.1875, [ox, oz, sx, sz] = [[0, 0, 1, T], [1 - T, 0, T, 1], [0, 1 - T, 1, T], [0, 0, T, 1]][(k + (k >> 2 & 1)) % 4];
+      for (const f of FACES) quad(m, f, x + ox, y, z + oz, k & 8 ? 43 : 42, 0, [sx, 1, sz], undefined, skyOf(c, [0, 0, 0], x, y, z));
+    }
+    if (!id || TORCHES.includes(id) || isDoor(id) || cheat.xray && !XRAY.includes(id)) continue;
     for (const f of FACES) {
       const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP || id === LAVA ? 2 : 0;
       if (n && !(CLEAR.includes(n) && n !== id) && !(cheat.xray && !XRAY.includes(n))) continue;
@@ -445,18 +458,23 @@ scene.add(outline, crack, sun, moon, ambient, camera, ...lamps);
 const HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
-const fist = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.3), new THREE.MeshLambertMaterial({ color: '#d9a066', depthTest: false }));
 const SHADE = new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3);
 const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false }));
 cube.geometry.setAttribute('color', SHADE);
 const dropCube = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }), drops = [];
 const flat = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), heldMat);
-const hand = new THREE.Group();
-fist.rotation.set(0.35, -0.25, 0);
+const skin = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.4), cube.material), sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.22), cube.material);
+const arm = new THREE.Group(), hand = new THREE.Group(), handLight = new THREE.PointLight('#ffb060', 0, 12, 1);
+for (const [mesh, t] of [[skin, 40], [sleeve, 41]]) { mesh.geometry.setAttribute('color', SHADE); setTile(mesh, Array(6).fill(t)); }
+sleeve.position.z = 0.3;
+arm.add(skin, sleeve);
+arm.position.set(0.05, -0.1, 0.14);
+arm.rotation.set(0.45, -0.15, 0.1);
 cube.rotation.set(0.2, 0.7, 0);
 flat.rotation.set(0, -1.1, 0.25);
-for (const o of [fist, cube, flat]) o.renderOrder = 10;
-hand.add(fist, cube, flat);
+for (const o of [skin, sleeve, cube, flat]) o.renderOrder = 10;
+hand.add(arm, cube, flat);
+scene.add(handLight);
 hand.position.set(touch ? 0.2 : 0.34, -0.3, -0.6);
 camera.add(hand);
 
@@ -596,21 +614,38 @@ function updateBits(dt) {
 function place() {
   const r = raycast(), p = player.pos, id = sel;
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
-  if (!r?.prev || !inv[id] || !BLOCKS[id]) return;
+  if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
+  if (!r?.prev || !inv[id] || !BLOCKS[id] && id !== DOOR) return;
   const [x, y, z] = r.prev, [dx, dy, dz] = r.prev.map((v, i) => v - r.hit[i]);
-  const put = id !== TORCH || dy === 1 ? id : dy === -1 ? 0 : dx === 1 ? 35 : dx === -1 ? 36 : dz === 1 ? 37 : 38;
-  if (!put || y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3) return;
+  const inside = y => x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3;
+  const put = id === DOOR ? 40 + facing() : id !== TORCH || dy === 1 ? id : dy === -1 ? 0 : dx === 1 ? 35 : dx === -1 ? 36 : dz === 1 ? 37 : 38;
+  if (!put || y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || inside(y)) return;
+  if (id === DOOR && (y + 1 >= H || solid(get(x, y + 1, z)) || inside(y + 1))) return;
   inv[id]--;
   swing ||= 0.01;
   set(x, y, z, put);
+  if (id === DOOR) set(x, y + 1, z, put + 8);
   if (id === CHEST) { chests[[x, y, z].join()] = {}; saveChests(); }
   drawInv();
+}
+
+function facing() {
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+  return Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 3 : 1) : (fz < 0 ? 2 : 0);
+}
+
+function toggleDoor([x, y, z]) {
+  const base = get(x, y, z) - 40 & 8 ? y - 1 : y;
+  for (const yy of [base, base + 1]) if (isDoor(get(x, yy, z))) set(x, yy, z, get(x, yy, z) ^ 4);
+  swing ||= 0.01;
 }
 
 function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
   const fluid = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map(([dx, dy, dz]) => get(x + dx, y + dy, z + dz)).find(n => FLUID.includes(n));
-  drop(DROP[id] ?? id, 1, x + 0.5, y + 0.5, z + 0.5);
+  drop(isDoor(id) ? DOOR : DROP[id] ?? id, 1, x + 0.5, y + 0.5, z + 0.5);
+  const other = y + (id - 40 & 8 ? -1 : 1);
+  if (isDoor(id) && isDoor(get(x, other, z))) set(x, other, z, AIR);
   if (id === CHEST) {
     for (const [k, n] of Object.entries(chests[key] ?? loot([x, y, z]))) if (n > 0) drop(+k, n, x + 0.5, y + 0.5, z + 0.5);
     delete chests[key];
@@ -657,7 +692,6 @@ function setTile(mesh, tiles) {
 function hold(id) {
   const [top, bottom, side] = BLOCKS[id] ?? [], sprite = !BLOCKS[id] || id === TORCH;
   held = id;
-  fist.visible = !id;
   cube.visible = !!id && !sprite;
   flat.visible = !!id && sprite;
   if (cube.visible) setTile(cube, [side, side, top, bottom, side, side]);
@@ -826,6 +860,8 @@ function loop(t) {
   camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
   camera.updateProjectionMatrix();
   lightTorches();
+  handLight.intensity = sel === TORCH || sel === LAMP ? 5 : 0;
+  handLight.position.copy(camera.position);
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
