@@ -82,7 +82,7 @@
   <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting · 🪄 trucchi</p>
 </div>
 <div class="panel stack craft" style="display: none">
-  <div class="gui stack"><div class="row head"><h2>Crafting</h2><button class="btn close">✕</button></div><div class="row inv"></div><div class="stack cols recipes"></div></div>
+  <div class="gui stack"><div class="row head"><h2>Crafting</h2><button class="btn close">✕</button></div><div class="row inv"></div><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
 </div>
 <div class="panel stack chest" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 pack"></div></div>
@@ -103,13 +103,21 @@
 import * as THREE from 'three';
 
 const touch = matchMedia('(pointer: coarse)').matches;
-const CS = 16, H = 64, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, DAY = 600;
+const CS = 16, H = 96, R = touch ? 5 : 7, REACH = 6, SKY = '#8ec5ff', SEA = 21, DAY = 600;
 const AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COBBLE = 4, SAND = 5, LOG = 6, PLANKS = 7, LEAVES = 8, GLASS = 9, BRICKS = 10, WATER = 11, TORCH = 12;
 const STICK = 13, WPICK = 14, SPICK = 15, WAXE = 16, SAXE = 17, WSHOVEL = 18, SSHOVEL = 19;
 const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOOKSHELF = 25, TABLE = 26, LAMP = 27;
 const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33, LAVA = 34;
 const WALL = { 35: [1, 0], 36: [-1, 0], 37: [0, 1], 38: [0, -1] }, TORCHES = [TORCH, 35, 36, 37, 38];
 const DOOR = 39, DOORS = Array.from({ length: 16 }, (_, i) => 40 + i), isDoor = b => b >= 40 && b < 56;
+const FLOWS = [56, 57, 58, 59, 60, 61, 62], isWater = b => b === WATER || b >= 56 && b <= 62, level = b => b === WATER ? 0 : b - 55;
+const GOLD_ORE = 63, DIAMOND_ORE = 64, REDSTONE_ORE = 65, LAPIS_ORE = 66, EMERALD_ORE = 67, COPPER_ORE = 68;
+const IRON_BLOCK = 69, GOLD_BLOCK = 70, DIAMOND_BLOCK = 71, REDSTONE_BLOCK = 72, LAPIS_BLOCK = 73, EMERALD_BLOCK = 74, COPPER_BLOCK = 75, COAL_BLOCK = 76;
+const SANDSTONE = 77, MOSSY = 78, GRANITE = 79, DIORITE = 80, ANDESITE = 81, OBSIDIAN = 82, GLOWSTONE = 83, PUMPKIN = 84, MELON = 85;
+const CLAY = 86, TERRACOTTA = 87, ICE = 88, SMOOTH = 89, CACTUS = 90;
+const BIRCH_LOG = 91, BIRCH_LEAVES = 92, BIRCH_PLANKS = 93, SPRUCE_LOG = 94, SPRUCE_LEAVES = 95, SPRUCE_PLANKS = 96, JUNGLE_LOG = 97, JUNGLE_LEAVES = 98, JUNGLE_PLANKS = 99;
+const GOLD = 100, DIAMOND = 101, REDSTONE = 102, LAPIS = 103, EMERALD = 104, COPPER = 105, DPICK = 106, DAXE = 107, DSHOVEL = 108;
+const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4;
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
@@ -117,7 +125,7 @@ const BLOCKS = {
   [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38], [LAVA]: [39, 39, 39],
   35: [13, 13, 13], 36: [13, 13, 13], 37: [13, 13, 13], 38: [13, 13, 13],
 };
-const FLUID = [WATER, LAVA];
+const FLUID = [WATER, LAVA, ...FLOWS], GLOW = [LAMP, GLOWSTONE];
 const ITEM_TILE = {
   [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
   [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35, [DOOR]: 44,
@@ -127,13 +135,11 @@ const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', '
   'Ghiaia', 'Neve', 'Minerale di carbone', 'Minerale di ferro', 'Mattoni di pietra', 'Libreria', 'Banco da lavoro', 'Lampada',
   'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia', 'Porta', ...DOORS.map(() => 'Porta')];
 for (const d of DOORS) BLOCKS[d] = [42, 42, 42];
-const IDS = NAMES.map((_, id) => id);
-const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
-const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
-const CLEAR = [LEAVES, GLASS, WATER, ...TORCHES, ...DOORS];
+for (const f of FLOWS) { NAMES[f] = 'Acqua'; BLOCKS[f] = [12, 12, 12]; }
+const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
-const TOOLS = { pick: [WPICK, SPICK, IPICK], axe: [WAXE, SAXE, IAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL] };
-const TOOL_IDS = Object.values(TOOLS).flat(), SPEED = [1, 4, 8, 12], HOTBAR = [...TOOL_IDS, ...PLACEABLE, DOOR];
+const TOOLS = { pick: [WPICK, SPICK, IPICK, DPICK], axe: [WAXE, SAXE, IAXE, DAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL, DSHOVEL] };
+const SPEED = [1, 4, 8, 12, 16];
 const HARD = {
   [GRASS]: [0.9, 'shovel'], [DIRT]: [0.75, 'shovel'], [SAND]: [0.75, 'shovel'], [GRAVEL]: [0.9, 'shovel'], [SNOW]: [0.5, 'shovel'],
   [STONE]: [6, 'pick', 1], [COBBLE]: [8, 'pick', 1], [BRICKS]: [8, 'pick', 1], [STONEBRICK]: [7, 'pick', 1],
@@ -166,10 +172,26 @@ const RECIPES = [
   [{ [GLASS]: 1, [TORCH]: 2 }, LAMP, 1],
   [{ [PLANKS]: 8 }, CHEST, 1],
   [{ [PLANKS]: 6 }, DOOR, 3],
+  [{ [BIRCH_LOG]: 1 }, BIRCH_PLANKS, 4],
+  [{ [SPRUCE_LOG]: 1 }, SPRUCE_PLANKS, 4],
+  [{ [JUNGLE_LOG]: 1 }, JUNGLE_PLANKS, 4],
+  [{ [GOLD_ORE]: 1, [COAL]: 1 }, GOLD, 1],
+  [{ [COPPER_ORE]: 1, [COAL]: 1 }, COPPER, 1],
+  [{ [DIAMOND]: 3, [STICK]: 2 }, DPICK, 1],
+  [{ [DIAMOND]: 3, [STICK]: 2 }, DAXE, 1],
+  [{ [DIAMOND]: 1, [STICK]: 2 }, DSHOVEL, 1],
+  [{ [SAND]: 4 }, SANDSTONE, 1],
+  [{ [COBBLE]: 1, [LEAVES]: 1 }, MOSSY, 1],
+  [{ [STONE]: 1, [COAL]: 1 }, SMOOTH, 1],
+  [{ [CLAY]: 1, [COAL]: 1 }, TERRACOTTA, 1],
+  [{ [SNOW]: 4 }, ICE, 1],
+  [{ [REDSTONE]: 4, [TORCH]: 1 }, GLOWSTONE, 1],
 ];
+for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_BLOCK], [REDSTONE, REDSTONE_BLOCK], [LAPIS, LAPIS_BLOCK], [EMERALD, EMERALD_BLOCK], [COPPER, COPPER_BLOCK], [COAL, COAL_BLOCK]])
+  RECIPES.push([{ [m]: 9 }, b, 1], [{ [b]: 1 }, m, 9]);
 const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !(isDoor(b) && b - 40 & 4);
 const AO = [0.45, 0.65, 0.82, 1];
-const XRAY = [COAL_ORE, IRON_ORE, CHEST];
+const XRAY = [COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, REDSTONE_ORE, LAPIS_ORE, EMERALD_ORE, COPPER_ORE, CHEST];
 const cheat = { xray: false, instant: false, god: false };
 
 const rnd = Math.random;
@@ -189,6 +211,15 @@ const HEADS = [
   (x, y) => x >= 6 && x <= 11 && y >= 1 && y <= 6 && x + y >= 9 && x + y <= 14,
   (x, y) => Math.hypot(x - 11.5, y - 3.5) < 3.2,
 ];
+const TOOLTILE = (head, m) => (x, y) => head(x, y) ? jit(m, 0.08) : handle(x, y) ? jit(C.bark) : NONE;
+const ORE = c => (x, y) => (x * 5 + y * 3) % 7 === 0 && (x + y) % 3 ? jit(c) : jit(C.stone);
+const METAL = c => (x, y) => jit(dim(c, x % 15 && y % 15 ? (x + y < 9 ? 1.12 : 1) : 0.72), 0.04);
+const SPECK = (a, b, k) => () => jit(rnd() < k ? b : a, 0.08);
+const PLANK = c => (x, y) => jit(dim(c, y % 4 === 3 || x === (y >> 2) * 5 % 16 ? 0.7 : 1), 0.05);
+const LOGTOP = (bark, wood) => (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return d > 6.5 ? jit(bark) : jit(dim(wood, (d | 0) % 2 ? 0.85 : 1)); };
+const LEAF = c => () => rnd() < 0.18 ? NONE : jit(c, 0.22);
+const INGOT = c => (x, y) => y >= 6 && y <= 10 && x >= 4 - (y - 6 >> 1) && x <= 11 + (y - 6 >> 1) ? jit(dim(c, y === 6 ? 1.2 : 1), 0.05) : NONE;
+const GEM = c => (x, y) => { const d = Math.abs(x - 7.5) + Math.abs(y - 7.5); return d < 6 ? jit(dim(c, d < 3 ? 1.25 : 1 - (x - y) / 40), 0.05) : NONE; };
 const TILES = [
   () => jit(C.grass, 0.2),
   (x, y) => y < 3 || y < 5 && rnd() < 0.5 ? jit(C.grass, 0.2) : jit(C.dirt),
@@ -217,7 +248,7 @@ const TILES = [
   (x, y) => handle(x, y) ? jit(C.bark) : NONE,
   (x, y) => Math.hypot(x - 8, y - 8) < 5 ? jit([45, 45, 50], 0.3) : NONE,
   (x, y) => y >= 6 && y <= 10 && x >= 4 - (y - 6 >> 1) && x <= 11 + (y - 6 >> 1) ? (y === 6 ? [245, 245, 250] : jit(C.iron, 0.05)) : NONE,
-  ...HEADS.flatMap(head => TOOL.map(m => (x, y) => head(x, y) ? jit(m, 0.08) : handle(x, y) ? jit(C.bark) : NONE)),
+  ...HEADS.flatMap(head => TOOL.map(m => TOOLTILE(head, m))),
   (x, y) => x >= 7 && x <= 8 && y >= 4 ? jit([120, 85, 45]) : x >= 6 && x <= 9 && y >= 1 && y < 4 ? jit(C.flame, 0.1) : NONE,
   (x, y) => jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
   (x, y) => y === 5 ? jit(dim(C.wood, 0.45)) : x >= 7 && x <= 8 && y >= 4 && y <= 7 ? jit([200, 200, 205]) : jit(dim(C.wood, x % 15 && y % 15 ? 0.85 : 0.55), 0.05),
@@ -228,6 +259,66 @@ const TILES = [
   (x, y) => x > 2 && x < 13 && y > 2 && y < 9 && x !== 7 && y !== 5 ? NONE : jit(dim(C.wood, x % 15 && y % 15 && x !== 7 ? 0.95 : 0.65), 0.05),
   (x, y) => x < 4 || x > 11 || y > 1 && y < 6 && x > 4 && x < 11 ? NONE : jit(dim(C.wood, x === 4 || x === 11 || y === 0 || y === 15 || y === 8 ? 0.65 : 0.95), 0.05),
 ];
+const T = f => TILES.push(f) - 1, same = f => Array(3).fill(T(f));
+function add(id, name, tiles, hard, drop) {
+  NAMES[id] = name;
+  BLOCKS[id] = tiles;
+  HARD[id] = hard;
+  if (drop) DROP[id] = drop;
+}
+function item(id, name, tile) {
+  NAMES[id] = name;
+  ITEM_TILE[id] = T(tile);
+}
+add(GOLD_ORE, "Minerale d'oro", same(ORE([250, 215, 60])), [7, 'pick', 3]);
+add(DIAMOND_ORE, 'Minerale di diamante', same(ORE([90, 230, 225])), [8, 'pick', 3], DIAMOND);
+add(REDSTONE_ORE, 'Minerale di redstone', same(ORE([220, 20, 20])), [7, 'pick', 3], REDSTONE);
+add(LAPIS_ORE, 'Minerale di lapislazzuli', same(ORE([30, 60, 190])), [7, 'pick', 2], LAPIS);
+add(EMERALD_ORE, 'Minerale di smeraldo', same(ORE([40, 200, 90])), [8, 'pick', 3], EMERALD);
+add(COPPER_ORE, 'Minerale di rame', same(ORE([225, 125, 85])), [6, 'pick', 2]);
+add(IRON_BLOCK, 'Blocco di ferro', same(METAL([220, 220, 225])), [10, 'pick', 2]);
+add(GOLD_BLOCK, "Blocco d'oro", same(METAL([250, 210, 60])), [8, 'pick', 3]);
+add(DIAMOND_BLOCK, 'Blocco di diamante', same(METAL([100, 235, 230])), [10, 'pick', 3]);
+add(REDSTONE_BLOCK, 'Blocco di redstone', same(METAL([200, 25, 20])), [8, 'pick', 1]);
+add(LAPIS_BLOCK, 'Blocco di lapislazzuli', same(METAL([35, 70, 200])), [8, 'pick', 2]);
+add(EMERALD_BLOCK, 'Blocco di smeraldo', same(METAL([45, 205, 95])), [10, 'pick', 3]);
+add(COPPER_BLOCK, 'Blocco di rame', same(METAL([200, 110, 75])), [8, 'pick', 2]);
+add(COAL_BLOCK, 'Blocco di carbone', same(METAL([34, 34, 36])), [8, 'pick', 1]);
+add(SANDSTONE, 'Arenaria', [T(() => jit(C.sand, 0.04)), 5, T((x, y) => jit(dim(C.sand, y % 5 === 4 ? 0.85 : 1), 0.04))], [4, 'pick', 1]);
+add(MOSSY, 'Pietrisco muschioso', same((x, y) => rnd() < 0.35 ? jit(C.leaf, 0.2) : TILES[4](x, y)), [8, 'pick', 1]);
+add(GRANITE, 'Granito', same(SPECK([155, 105, 85], [195, 145, 125], 0.3)), [6, 'pick', 1]);
+add(DIORITE, 'Diorite', same(SPECK([190, 190, 190], [240, 240, 240], 0.35)), [6, 'pick', 1]);
+add(ANDESITE, 'Andesite', same(SPECK([118, 118, 120], [150, 150, 150], 0.35)), [6, 'pick', 1]);
+add(OBSIDIAN, 'Ossidiana', same(SPECK([20, 15, 35], [65, 45, 95], 0.15)), [20, 'pick', 4]);
+add(GLOWSTONE, 'Pietra luminosa', same(SPECK([205, 150, 70], [255, 235, 150], 0.4)), [0.5]);
+add(PUMPKIN, 'Zucca', [T((x, y) => x > 6 && x < 9 && y > 6 && y < 9 ? jit([80, 110, 40]) : jit([225, 125, 20], 0.05)), T(() => jit([225, 125, 20], 0.05)), T(x => jit(dim([225, 125, 20], x % 4 ? 1 : 0.8), 0.05))], [1.5, 'axe']);
+add(MELON, 'Anguria', [T(() => jit([110, 150, 40], 0.05)), T(() => jit([110, 150, 40], 0.05)), T(x => jit(x % 4 < 2 ? [95, 165, 45] : [60, 120, 30], 0.05))], [1.5, 'axe']);
+add(CLAY, 'Argilla', same(() => jit([160, 165, 178], 0.05)), [0.9, 'shovel']);
+add(TERRACOTTA, 'Terracotta', same(() => jit([160, 90, 65], 0.05)), [4, 'pick', 1]);
+add(ICE, 'Ghiaccio', same((x, y) => jit((x + y * 2) % 11 ? [165, 200, 240] : [220, 235, 255], 0.03)), [0.8]);
+add(SMOOTH, 'Pietra liscia', same((x, y) => jit(dim(C.stone, x % 15 && y % 15 ? 1.1 : 0.8), 0.03)), [6, 'pick', 1]);
+add(CACTUS, 'Cactus', [T((x, y) => jit(x % 15 && y % 15 ? [90, 150, 60] : [60, 110, 40])), T(() => jit([90, 150, 60])), T(x => jit(x % 4 === 1 ? [40, 90, 30] : [80, 150, 55], 0.05))], [0.4]);
+add(BIRCH_LOG, 'Tronco di betulla', [T(LOGTOP([215, 215, 205], [200, 180, 120])), 0, T((x, y) => (x * 3 + y * 7) % 13 === 0 || y % 6 === 0 && x % 5 < 2 ? jit([45, 45, 45]) : jit([225, 225, 215], 0.04))], [3, 'axe']);
+add(BIRCH_LEAVES, 'Foglie di betulla', same(LEAF([105, 150, 60])), [0.3]);
+add(BIRCH_PLANKS, 'Assi di betulla', same(PLANK([200, 180, 120])), [3, 'axe']);
+add(SPRUCE_LOG, 'Tronco di abete', [T(LOGTOP([70, 50, 30], [120, 90, 55])), 0, T(x => jit(dim([70, 50, 30], x % 4 ? 1 : 0.7)))], [3, 'axe']);
+add(SPRUCE_LEAVES, 'Foglie di abete', same(LEAF([40, 85, 50])), [0.3]);
+add(SPRUCE_PLANKS, 'Assi di abete', same(PLANK([115, 85, 50])), [3, 'axe']);
+add(JUNGLE_LOG, 'Tronco tropicale', [T(LOGTOP([110, 85, 45], [170, 120, 85])), 0, T(x => jit(dim([110, 85, 45], x % 3 ? 1 : 0.75)))], [3, 'axe']);
+add(JUNGLE_LEAVES, 'Foglie tropicali', same(LEAF([50, 150, 30])), [0.3]);
+add(JUNGLE_PLANKS, 'Assi tropicali', same(PLANK([170, 120, 85])), [3, 'axe']);
+for (const b of [BIRCH_LOG, SPRUCE_LOG, JUNGLE_LOG]) BLOCKS[b][1] = BLOCKS[b][0];
+item(GOLD, "Lingotto d'oro", INGOT([250, 215, 60]));
+item(DIAMOND, 'Diamante', GEM([100, 235, 230]));
+item(REDSTONE, 'Redstone', (x, y) => Math.hypot(x - 8, y - 9) < 5 && rnd() < 0.6 ? jit([220, 30, 20], 0.2) : NONE);
+item(LAPIS, 'Lapislazzuli', GEM([35, 70, 200]));
+item(EMERALD, 'Smeraldo', GEM([45, 205, 95]));
+item(COPPER, 'Lingotto di rame', INGOT([220, 120, 80]));
+[DPICK, DAXE, DSHOVEL].forEach((id, i) => item(id, ['Piccone', 'Ascia', 'Pala'][i] + ' di diamante', TOOLTILE(HEADS[i], [100, 235, 230])));
+const IDS = NAMES.map((_, id) => id);
+const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
+const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
+const TOOL_IDS = Object.values(TOOLS).flat(), HOTBAR = [...TOOL_IDS, ...PLACEABLE, DOOR];
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
   [[1, 0, 0], 0.6, 2, [[1, 1, 1, 0, 1], [1, 0, 1, 0, 0], [1, 1, 0, 1, 1], [1, 0, 0, 1, 0]]],
@@ -249,25 +340,67 @@ function noise3(x, y, z) {
   return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
 }
 const cave = (x, y, z) => Math.abs(noise3(x / 16, y / 10, z / 16) - 0.5) < 0.05 && Math.abs(noise3(x / 16 + 40, y / 10, z / 16) - 0.5) < 0.05;
-const height = (x, z) => Math.floor(12 + noise(x / 64, z / 64) * 30 + noise(x / 16 + 100, z / 16) * 6 + noise(x / 4 + 200, z / 4) * 1.5);
+const height = (x, z) => Math.min(H - 16, Math.floor(12 + noise(x / 64, z / 64) * 30 + noise(x / 16 + 100, z / 16) * 6 + noise(x / 4 + 200, z / 4) * 1.5 + Math.max(0, noise(x / 110 + 700, z / 110) - 0.55) * 130));
+function biome(x, z) {
+  const t = noise(x / 180 + 500, z / 180), m = noise(x / 180 + 900, z / 180 + 900);
+  return t > 0.6 ? (m < 0.5 ? DESERT : JUNGLE) : t < 0.38 ? TAIGA : m > 0.58 ? FOREST : PLAINS;
+}
 const at = (x, y, z) => x + z * CS + y * CS * CS;
 const ck = (cx, cz) => cx + ',' + cz;
 const edits = JSON.parse(localStorage.getItem('blocchi') ?? '{}');
-const chunks = new Map();
+const chunks = new Map(), dirty = new Set(), flowQ = new Set();
 
-function tree(d, x, y, z) {
-  const h = 4 + (hash(x, y) * 3 | 0);
-  for (let dy = h - 2; dy <= h + 1; dy++) {
-    const r = dy < h ? 2 : 1;
-    for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++)
-      if (Math.abs(dx) + Math.abs(dz) < r * 2 || dy === h) d[at(x + dx, y + dy, z + dz)] = LEAVES;
-  }
-  for (let i = 0; i < h; i++) d[at(x, y + i, z)] = LOG;
+function blob(d, x, y, z, r, leaves, full) {
+  for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++)
+    if ((full || Math.abs(dx) + Math.abs(dz) < Math.max(1, r * 2)) && !d[at(x + dx, y, z + dz)]) d[at(x + dx, y, z + dz)] = leaves;
 }
 
+function tree(d, x, y, z, log, leaves, h) {
+  blob(d, x, y + h - 2, z, 2, leaves);
+  blob(d, x, y + h - 1, z, 2, leaves);
+  blob(d, x, y + h, z, 1, leaves, true);
+  blob(d, x, y + h + 1, z, 1, leaves);
+  for (let i = 0; i < h; i++) d[at(x, y + i, z)] = log;
+}
+
+function spruce(d, x, y, z, h) {
+  for (let dy = 2; dy <= h + 1; dy++) blob(d, x, y + dy, z, dy >= h ? 0 : (h - dy) % 2 + 1, SPRUCE_LEAVES);
+  for (let i = 0; i < h; i++) d[at(x, y + i, z)] = SPRUCE_LOG;
+}
+
+function jungle(d, x, y, z, h) {
+  [3, 3, 2, 1].forEach((r, i) => blob(d, x, y + h - 2 + i, z, r, JUNGLE_LEAVES));
+  for (let i = 0; i < h; i++) d[at(x, y + i, z)] = JUNGLE_LOG;
+}
+
+const ORES = [[0.012, COAL_ORE, H], [0.02, IRON_ORE, 40], [0.027, COPPER_ORE, 50], [0.031, GOLD_ORE, 20], [0.035, REDSTONE_ORE, 14], [0.038, LAPIS_ORE, 18], [0.0405, DIAMOND_ORE, 12], [0.0415, EMERALD_ORE, H]];
 function ore(x, y, z) {
-  const k = hash((x >> 1) + (y >> 1) * 7919, z >> 1);
-  return k < 0.012 ? COAL_ORE : k < 0.02 && y < 28 ? IRON_ORE : STONE;
+  const k = hash((x >> 1) + (y >> 1) * 7919, z >> 1), o = ORES.find(([p]) => k < p);
+  if (o) return y < o[2] ? o[1] : STONE;
+  const n = noise3(x / 12 + 300, y / 12, z / 12);
+  return n > 0.72 ? GRANITE : n < 0.28 ? DIORITE : n > 0.67 ? ANDESITE : STONE;
+}
+
+function surface(h, b, wx, wz) {
+  if (h <= SEA - 3) return noise(wx / 8 + 50, wz / 8) > 0.6 ? GRAVEL : noise(wx / 8 + 80, wz / 8) > 0.65 ? CLAY : SAND;
+  if (h > 60) return SNOW;
+  if (h > 52) return STONE;
+  if (h < 22 || b === DESERT) return SAND;
+  return b === TAIGA && h > 38 ? SNOW : GRASS;
+}
+
+const TREES = [0.01, 0.045, 0, 0.07, 0.03];
+function decorate(d, x, z, wx, wz, h, top, b) {
+  const r = hash(wx, wz + 7777), k = hash(wx + 3, wz);
+  if (h + 16 >= H) return;
+  if (b === DESERT && top === SAND && h >= 22 && r < 0.01) for (let i = 1; i <= 1 + (k * 3 | 0); i++) d[at(x, h + i, z)] = CACTUS;
+  if (top !== GRASS) return;
+  if (r > 0.994) return void (d[at(x, h + 1, z)] = b === JUNGLE ? MELON : PUMPKIN);
+  if (r >= TREES[b] || x < 3 || x > 12 || z < 3 || z > 12) return;
+  if (b === TAIGA) spruce(d, x, h + 1, z, 6 + (k * 4 | 0));
+  else if (b === JUNGLE) jungle(d, x, h + 1, z, 9 + (k * 4 | 0));
+  else if (b === FOREST && k < 0.4) tree(d, x, h + 1, z, BIRCH_LOG, BIRCH_LEAVES, 5 + (k * 5 | 0));
+  else tree(d, x, h + 1, z, LOG, LEAVES, 4 + (k * 3 | 0));
 }
 
 function carve(d, x, z, wx, wz, h) {
@@ -278,13 +411,12 @@ function generate(cx, cz) {
   const d = new Uint8Array(CS * CS * H), heights = new Int16Array(18 * 18);
   for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = height(cx * CS + x, cz * CS + z);
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
-    const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18];
-    const top = h <= SEA - 3 && noise(wx / 8 + 50, wz / 8) > 0.6 ? GRAVEL : h < 22 ? SAND : h > 42 ? SNOW : h > 38 ? STONE : GRASS;
-    const under = top === GRASS || top === SNOW ? DIRT : top;
+    const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18], b = biome(wx, wz), top = surface(h, b, wx, wz);
+    const under = top === GRASS || top === SNOW ? DIRT : top === SAND && b === DESERT && h >= 22 ? SANDSTONE : top;
     for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
     carve(d, x, z, wx, wz, h);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
-    if (top === GRASS && x > 1 && x < 14 && z > 1 && z < 14 && hash(wx, wz + 7777) < 0.015) tree(d, x, h + 1, z);
+    decorate(d, x, z, wx, wz, h, top, b);
   }
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) d[i] = id;
   return [d, heights];
@@ -340,7 +472,7 @@ function buildMesh(c) {
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
     if (id === LAVA && !c.data[at(x, y + 1, z)] && (x + z) % 4 === 0) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 1.2, c.cz * CS + z + 0.5));
-    if (TORCHES.includes(id) || id === LAMP) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (id === LAMP ? 0.5 : 0.8), c.cz * CS + z + 0.5));
+    if (TORCHES.includes(id) || GLOW.includes(id)) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (GLOW.includes(id) ? 0.5 : 0.8), c.cz * CS + z + 0.5));
     if (TORCHES.includes(id)) {
       const [dx, dz] = WALL[id] ?? [0, 0];
       for (const f of FACES) quad(m, f, x + 0.4375 - dx * 0.4, y + (dx || dz ? 0.2 : 0), z + 0.4375 - dz * 0.4, 13, 2, [0.125, 0.625, 0.125], undefined, 1, [dx * 0.3, dz * 0.3]);
@@ -350,10 +482,12 @@ function buildMesh(c) {
       for (const f of FACES) quad(m, f, x + ox, y, z + oz, k & 8 ? 43 : 42, 0, [sx, 1, sz], undefined, skyOf(c, [0, 0, 0], x, y, z));
     }
     if (!id || TORCHES.includes(id) || isDoor(id) || cheat.xray && !XRAY.includes(id)) continue;
+    const layer = isWater(id) ? 1 : GLOW.includes(id) || id === LAVA ? 2 : 0;
+    const tall = FLOWS.includes(id) && !isWater(near(c, x, y + 1, z)) ? 1 - level(id) * 0.11 : 1;
     for (const f of FACES) {
-      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), layer = id === WATER ? 1 : id === LAMP || id === LAVA ? 2 : 0;
-      if (n && !(CLEAR.includes(n) && n !== id) && !(cheat.xray && !XRAY.includes(n))) continue;
-      quad(m, f, x, y, z, BLOCKS[id][f[2]], layer, undefined, layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
+      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), same = n === id || isWater(n) && isWater(id);
+      if (n && !(CLEAR.includes(n) && !same) && !(cheat.xray && !XRAY.includes(n))) continue;
+      quad(m, f, x, y, z, BLOCKS[id][f[2]], layer, [1, tall, 1], layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -370,16 +504,45 @@ function buildMesh(c) {
   scene.add(c.mesh);
 }
 
-function set(x, y, z, id) {
+function set(x, y, z, id, now = true) {
   const cx = Math.floor(x / CS), cz = Math.floor(z / CS), lx = x - cx * CS, lz = z - cz * CS, c = chunk(cx, cz);
   c.data[at(lx, y, lz)] = id;
   (edits[ck(cx, cz)] ??= {})[at(lx, y, lz)] = id;
-  localStorage.setItem('blocchi', JSON.stringify(edits));
-  buildMesh(c);
+  dirty.add(c);
   for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
     const n = chunks.get(ck(cx + dx, cz + dz));
-    if (n?.mesh && (lx + dx < 0 || lx + dx >= CS || lz + dz < 0 || lz + dz >= CS)) buildMesh(n);
+    if (n && (lx + dx < 0 || lx + dx >= CS || lz + dz < 0 || lz + dz >= CS)) dirty.add(n);
   }
+  if (now) flush();
+}
+
+function flush() {
+  for (const c of dirty) if (c.mesh && chunks.get(ck(c.cx, c.cz)) === c) buildMesh(c);
+  dirty.clear();
+  localStorage.setItem('blocchi', JSON.stringify(edits));
+}
+
+const wake = (x, y, z) => { for (const [dx, dy, dz] of [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]]) flowQ.add([x + dx, y + dy, z + dz].join()); };
+
+function incoming(x, y, z) {
+  if (isWater(get(x, y + 1, z))) return 1;
+  const best = Math.min(...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => {
+    const n = get(x + dx, y, z + dz), under = get(x + dx, y - 1, z + dz);
+    return isWater(n) && (solid(under) || isWater(under)) ? level(n) + 1 : 9;
+  }));
+  return best <= 7 ? best : undefined;
+}
+
+function flowTick() {
+  const cells = [...flowQ].slice(0, 48);
+  for (const k of cells) {
+    flowQ.delete(k);
+    const [x, y, z] = k.split(',').map(Number), cur = get(x, y, z), lvl = y > 0 && (!cur || cur === LAVA) ? incoming(x, y, z) : undefined;
+    if (lvl === undefined) continue;
+    set(x, y, z, cur === LAVA ? OBSIDIAN : 55 + lvl, false);
+    if (cur !== LAVA) wake(x, y, z);
+  }
+  if (cells.length) flush();
 }
 
 function streamChunks() {
@@ -485,7 +648,7 @@ const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
 let chestAt = '';
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
-let sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
+let flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -527,7 +690,7 @@ function vitals(dt, swim) {
   if (p.ground && !p.fly && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
   p.peak = p.ground || p.fly || swim ? p.pos.y : Math.max(p.peak, p.pos.y);
   if ((at(0.1) === LAVA || at(1.2) === LAVA) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
-  air = at(1.62) === WATER ? air - dt : Math.min(10, air + dt * 4);
+  air = isWater(at(1.62)) ? air - dt : Math.min(10, air + dt * 4);
   if (air < 0) { air += 1; hurt(2); }
   if (clock - hurtAt > 4) hp = Math.min(20, hp + dt / 2);
 }
@@ -642,7 +805,7 @@ function toggleDoor([x, y, z]) {
 
 function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
-  const fluid = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map(([dx, dy, dz]) => get(x + dx, y + dy, z + dz)).find(n => FLUID.includes(n));
+  const lava = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === LAVA);
   drop(isDoor(id) ? DOOR : DROP[id] ?? id, 1, x + 0.5, y + 0.5, z + 0.5);
   const other = y + (id - 40 & 8 ? -1 : 1);
   if (isDoor(id) && isDoor(get(x, other, z))) set(x, other, z, AIR);
@@ -652,7 +815,8 @@ function dig([x, y, z]) {
     saveChests();
   }
   burst([x, y, z], id, 14);
-  set(x, y, z, fluid ?? AIR);
+  set(x, y, z, lava ? LAVA : AIR);
+  wake(x, y, z);
 }
 
 function drop(id, n, x, y, z) {
@@ -743,7 +907,8 @@ function drawInv() {
 }
 
 function drawCraft() {
-  $('.recipes').replaceChildren(...RECIPES.map(([need, out, n]) => {
+  const can = ([need]) => Object.entries(need).every(([id, k]) => inv[id] >= k);
+  $('.recipes').replaceChildren(...RECIPES.filter(r => !$('.can').checked || can(r)).map(([need, out, n]) => {
     const b = document.createElement('button'), row = document.createElement('div');
     b.className = 'recipe';
     row.className = 'row';
@@ -783,7 +948,7 @@ const saveChests = () => localStorage.setItem('blocchi-chests', JSON.stringify(c
 
 function loot([x, y, z]) {
   const k = i => hash(x * 31 + i, z * 17 + y);
-  return { [COAL]: 2 + (k(1) * 7 | 0), [TORCH]: 2 + (k(2) * 5 | 0), [IRON_ORE]: 1 + (k(3) * 3 | 0), [IRON]: k(4) < 0.4 ? 1 + (k(5) * 3 | 0) : 0 };
+  return { [COAL]: 2 + (k(1) * 7 | 0), [TORCH]: 2 + (k(2) * 5 | 0), [IRON_ORE]: 1 + (k(3) * 3 | 0), [IRON]: k(4) < 0.4 ? 1 + (k(5) * 3 | 0) : 0, [GOLD]: k(6) < 0.3 ? 1 + (k(7) * 3 | 0) : 0, [DIAMOND]: k(8) < 0.15 ? 1 + (k(9) * 2 | 0) : 0 };
 }
 
 function openChest(hit) {
@@ -804,7 +969,7 @@ function drawChest() {
 function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
-  const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = fluid === WATER, hot = fluid === LAVA;
+  const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = isWater(fluid), hot = fluid === LAVA;
   ambient.intensity = light * Math.PI;
   scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
   if (hot) scene.background.set(HOT);
@@ -844,6 +1009,7 @@ function loop(t) {
   const p = player, dt = playing ? Math.min(0.05, (t - last) / 1000) : 0;
   last = t;
   if (dt) update(dt);
+  if ((flowT += dt) > 0.25) { flowT = 0; flowTick(); }
   streamChunks();
   camera.position.set(p.pos.x, p.pos.y + 1.62, p.pos.z);
   camera.rotation.set(p.pitch, p.yaw, 0);
@@ -860,7 +1026,7 @@ function loop(t) {
   camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
   camera.updateProjectionMatrix();
   lightTorches();
-  handLight.intensity = sel === TORCH || sel === LAMP ? 5 : 0;
+  handLight.intensity = sel === TORCH || GLOW.includes(sel) ? 5 : 0;
   handLight.position.copy(camera.position);
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
@@ -917,6 +1083,7 @@ document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.st
 $('.start').onclick = start;
 for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
 $('.instant').onchange = e => cheat.instant = e.target.checked;
+$('.can').onchange = drawCraft;
 $('.god').onchange = e => cheat.god = e.target.checked;
 $('.xray').onchange = e => {
   cheat.xray = e.target.checked;
