@@ -11,7 +11,7 @@
     --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --pad: 60px;
     --gui: #c6c6c6; --gui-hi: #fff; --gui-lo: #555; --gui-slot: #8b8b8b; --gui-hover: #d8d8e8; --ink: #3f3f3f; --edge: #000;
     --heart: #e0282e; --heart-empty: #0007; --air: #9cf;
-    --logo: #e6e6e6; --logo-shadow: #555; --splash: #ffff55; --btn: #7a7a7a; --btn-hi: #aaa; --btn-lo: #444; --btn-hover: #7a86c2;
+    --hot-frame: #6b6b6b; --logo: #e6e6e6; --logo-shadow: #555; --splash: #ffff55; --btn: #7a7a7a; --btn-hi: #aaa; --btn-lo: #444; --btn-hover: #7a86c2;
     --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); --bottom: max(12px, env(safe-area-inset-bottom));
   }
   body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -28,8 +28,9 @@
   .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: var(--left); justify-items: start; text-shadow: 0 2px 3px var(--edge); pointer-events: none; }
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
   .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
-  .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; scrollbar-width: none; background: var(--slot); }
-  .bar .on { outline: 3px solid var(--pick); outline-offset: -3px; }
+  .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; padding: 3px; overflow-x: auto; scrollbar-width: none; background: var(--slot); border: 2px solid var(--edge); }
+  .bar .icon { border: 3px solid var(--hot-frame); }
+  .bar .on { border-color: var(--pick); }
   .stack { display: grid; gap: 8px; }
   .cols { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); width: min(60rem, 86vw); }
   .panel { position: fixed; inset: 0; place-content: center; justify-items: center; text-align: center; overflow: auto; background: var(--shade); }
@@ -136,6 +137,7 @@ const CLAY = 86, TERRACOTTA = 87, ICE = 88, SMOOTH = 89, CACTUS = 90;
 const BIRCH_LOG = 91, BIRCH_LEAVES = 92, BIRCH_PLANKS = 93, SPRUCE_LOG = 94, SPRUCE_LEAVES = 95, SPRUCE_PLANKS = 96, JUNGLE_LOG = 97, JUNGLE_LEAVES = 98, JUNGLE_PLANKS = 99;
 const GOLD = 100, DIAMOND = 101, REDSTONE = 102, LAPIS = 103, EMERALD = 104, COPPER = 105, DPICK = 106, DAXE = 107, DSHOVEL = 108;
 const WOOL = 109, BED = 110, PORK = 111, PORK_C = 112, BEEF = 113, BEEF_C = 114, CHICKEN = 115, CHICKEN_C = 116, MUTTON = 117, MUTTON_C = 118, LEATHER = 119, FEATHER = 120;
+const TALLGRASS = 125, POPPY = 126, DANDELION = 127, DEADBUSH = 128, PLANTS = [125, 126, 127, 128];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
 const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4;
 const BLOCKS = {
@@ -156,7 +158,7 @@ const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', '
   'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia', 'Porta', ...DOORS.map(() => 'Porta')];
 for (const d of DOORS) BLOCKS[d] = [42, 42, 42];
 for (const f of FLOWS) { NAMES[f] = 'Acqua'; BLOCKS[f] = [12, 12, 12]; }
-const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED];
+const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED, ...PLANTS];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
 const TOOLS = { pick: [WPICK, SPICK, IPICK, DPICK], axe: [WAXE, SAXE, IAXE, DAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL, DSHOVEL] };
 const SPEED = [1, 4, 8, 12, 16];
@@ -218,7 +220,7 @@ const RECIPES = [
 ];
 for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_BLOCK], [REDSTONE, REDSTONE_BLOCK], [LAPIS, LAPIS_BLOCK], [EMERALD, EMERALD_BLOCK], [COPPER, COPPER_BLOCK], [COAL, COAL_BLOCK]])
   RECIPES.push([{ [m]: 9 }, b, 1], [{ [b]: 1 }, m, 9]);
-const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !(isDoor(b) && b - 40 & 4);
+const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !PLANTS.includes(b) && !(isDoor(b) && b - 40 & 4);
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, REDSTONE_ORE, LAPIS_ORE, EMERALD_ORE, COPPER_ORE, CHEST];
 const cheat = { xray: false, instant: false, god: false, infinite: false };
@@ -356,9 +358,18 @@ add(BED, 'Letto', [T((x, y) => y < 5 ? jit([240, 240, 240], 0.03) : jit([180, 30
 item(LEATHER, 'Cuoio', (x, y) => x > 2 && x < 13 && y > 3 && y < 13 ? jit([140, 80, 40], 0.08) : NONE);
 item(FEATHER, 'Piuma', (x, y) => Math.abs(x + y - 15) <= (x > 4 && x < 12 ? 1 : 0) && x > 2 && x < 14 ? jit([245, 245, 245], 0.03) : NONE);
 [...TOOL, [100, 235, 230]].forEach((c, i) => item(SWORDS[i], 'Spada di ' + ['legno', 'pietra', 'ferro', 'diamante'][i], SWORD(c)));
+add(TALLGRASS, 'Erba alta', same((x, y) => (x % 3 === 1 || x % 4 === 0) && y > 2 + (x * 7) % 6 ? jit(dim(C.grass, 0.8 + y / 60), 0.15) : NONE), [0], AIR);
+add(POPPY, 'Papavero', same((x, y) => Math.hypot(x - 7.5, y - 5) < 3 ? jit(Math.hypot(x - 7.5, y - 5) < 1 ? [40, 30, 20] : [210, 30, 30], 0.08) : (x === 7 || x === 8) && y > 7 ? jit([60, 120, 40]) : NONE), [0]);
+add(DANDELION, 'Tarassaco', same((x, y) => Math.hypot(x - 7.5, y - 7) < 2.3 ? jit([250, 220, 40], 0.08) : (x === 7 || x === 8) && y > 8 ? jit([60, 120, 40]) : NONE), [0]);
+add(DEADBUSH, 'Arbusto secco', same((x, y) => y > 4 && (Math.abs(x - 7.5 - (y - 15) * 0.4) < 0.7 || Math.abs(x - 7.5 + (y - 15) * 0.4) < 0.7 || x === 7 && y > 8) ? jit([120, 85, 45]) : NONE), [0], AIR);
+DROP[TALLGRASS] = DROP[DEADBUSH] = AIR;
 const IDS = NAMES.map((_, id) => id);
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
 const TOOL_IDS = Object.values(TOOLS).flat();
+const CROSS = [
+  [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [1, 0, 1, 1, 0]], [[1, 1, 1, 0, 1], [1, 0, 1, 0, 0], [0, 1, 0, 1, 1], [0, 0, 0, 1, 0]],
+  [[1, 1, 0, 0, 1], [1, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]], [[0, 1, 1, 0, 1], [0, 0, 1, 0, 0], [1, 1, 0, 1, 1], [1, 0, 0, 1, 0]],
+].map(c => [[0, 1, 0], 0.9, 2, c]);
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
   [[1, 0, 0], 0.6, 2, [[1, 1, 1, 0, 1], [1, 0, 1, 0, 0], [1, 1, 0, 1, 1], [1, 0, 0, 1, 0]]],
@@ -435,7 +446,10 @@ function decorate(d, x, z, wx, wz, h, top, b) {
   const r = hash(wx, wz + 7777), k = hash(wx + 3, wz);
   if (h + 16 >= H) return;
   if (b === DESERT && top === SAND && h >= 22 && r < 0.01) for (let i = 1; i <= 1 + (k * 3 | 0); i++) d[at(x, h + i, z)] = CACTUS;
+  if (b === DESERT && top === SAND && h >= 22 && r > 0.99) d[at(x, h + 1, z)] = DEADBUSH;
   if (top !== GRASS) return;
+  const g = hash(wx + 11, wz - 5);
+  if (g < [0.12, 0.1, 0, 0.3, 0.05][b]) d[at(x, h + 1, z)] = g < 0.012 ? POPPY : g < 0.024 ? DANDELION : TALLGRASS;
   if (r > 0.998) return void (d[at(x, h + 1, z)] = b === JUNGLE ? MELON : PUMPKIN);
   if (r >= TREES[b] || x < 3 || x > 12 || z < 3 || z > 12) return;
   if (b === TAIGA) spruce(d, x, h + 1, z, 6 + (k * 4 | 0));
@@ -522,7 +536,8 @@ function buildMesh(c) {
       const k = id - 40, T = 0.1875, [ox, oz, sx, sz] = [[0, 0, 1, T], [1 - T, 0, T, 1], [0, 1 - T, 1, T], [0, 0, T, 1]][(k + (k >> 2 & 1)) % 4];
       for (const f of FACES) quad(m, f, x + ox, y, z + oz, k & 8 ? 43 : 42, 0, [sx, 1, sz], undefined, skyOf(c, [0, 0, 0], x, y, z));
     }
-    if (!id || TORCHES.includes(id) || isDoor(id) || cheat.xray && !XRAY.includes(id)) continue;
+    if (PLANTS.includes(id)) for (const f of CROSS) quad(m, f, x, y, z, BLOCKS[id][2], 0, undefined, undefined, skyOf(c, [0, 0, 0], x, y, z));
+    if (!id || TORCHES.includes(id) || isDoor(id) || PLANTS.includes(id) || cheat.xray && !XRAY.includes(id)) continue;
     const layer = isWater(id) ? 1 : GLOW.includes(id) || id === LAVA ? 2 : 0;
     const tall = id === BED ? 0.5625 : FLOWS.includes(id) && !isWater(near(c, x, y + 1, z)) ? 1 - level(id) * 0.11 : 1;
     for (const f of FACES) {
@@ -615,6 +630,14 @@ function paintAtlas() {
   return c;
 }
 
+function paintClouds() {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  c.width = c.height = 64;
+  g.fillStyle = '#fff';
+  for (let x = 0; x < 64; x++) for (let y = 0; y < 64; y++) if (noise(x / 5, y / 5 + 999) > 0.62) g.fillRect(x, y, 1, 1);
+  return c;
+}
+
 function paintCracks() {
   const c = document.createElement('canvas'), g = c.getContext('2d'), pts = [];
   c.width = 160; c.height = 16;
@@ -658,7 +681,15 @@ const sun = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshBasicM
 const moon = new THREE.Mesh(sun.geometry, new THREE.MeshBasicMaterial({ color: '#dde4f0', fog: false }));
 const ambient = new THREE.AmbientLight('#fff', Math.PI);
 const lamps = Array.from({ length: 6 }, () => new THREE.PointLight('#ffb060', 0, 12, 1));
-scene.add(outline, crack, sun, moon, ambient, camera, ...lamps);
+const cloudTex = new THREE.CanvasTexture(paintClouds());
+cloudTex.magFilter = THREE.NearestFilter;
+cloudTex.wrapS = cloudTex.wrapT = THREE.RepeatWrapping;
+cloudTex.repeat.set(3, 3);
+const clouds = new THREE.Mesh(new THREE.PlaneGeometry(1536, 1536), new THREE.MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: 0.85, depthWrite: false, fog: false, side: THREE.DoubleSide }));
+clouds.rotation.x = -Math.PI / 2;
+const stars = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array.from({ length: 900 }, () => new THREE.Vector3(rnd() * 2 - 1, rnd(), rnd() * 2 - 1).normalize().multiplyScalar(450).toArray()).flat(), 3)),
+  new THREE.PointsMaterial({ color: '#fff', size: 2, sizeAttenuation: false, transparent: true, fog: false }));
+scene.add(outline, crack, sun, moon, ambient, camera, clouds, stars, ...lamps);
 const HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
@@ -666,7 +697,9 @@ const SHADE = new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].fla
 const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false }));
 cube.geometry.setAttribute('color', SHADE);
 const dropCube = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }), drops = [];
-const flat = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), heldMat);
+const flat = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), heldMat), itemGeos = new Map();
+flat.scale.setScalar(0.55);
+flat.position.set(0.02, 0.1, -0.05);
 const skin = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.4), cube.material), sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.22), cube.material);
 const arm = new THREE.Group(), hand = new THREE.Group(), handLight = new THREE.PointLight('#ffb060', 0, 12, 1);
 for (const [mesh, t] of [[skin, 40], [sleeve, 41]]) { mesh.geometry.setAttribute('color', SHADE); setTile(mesh, Array(6).fill(t)); }
@@ -675,7 +708,7 @@ arm.add(skin, sleeve);
 arm.position.set(0.05, -0.1, 0.14);
 arm.rotation.set(0.45, -0.15, 0.1);
 cube.rotation.set(0.2, 0.7, 0);
-flat.rotation.set(0, -1.1, 0.25);
+flat.rotation.set(0.1, -1.25, 0.3);
 for (const o of [skin, sleeve, cube, flat]) o.renderOrder = 10;
 hand.add(arm, cube, flat);
 scene.add(handLight);
@@ -691,7 +724,7 @@ const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
 let chestAt = '';
-let bed = saved?.bed, spawnT = 0, attackT = 0;
+let bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let flowT = 0, sel = 0, cursor = null, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
@@ -741,8 +774,25 @@ function vitals(dt, swim) {
   if (clock - hurtAt > 4) hp = Math.min(20, hp + dt / 2);
 }
 
+let audio = null;
+const tone = id => ({ pick: 2200, shovel: 450, axe: 850 })[HARD[id]?.[1]] ?? 1400;
+function sound(freq, vol = 0.25, len = 0.15) {
+  if (!audio) return;
+  const buf = audio.createBuffer(1, audio.sampleRate * len | 0, audio.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (rnd() * 2 - 1) * (1 - i / d.length) ** 2;
+  const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+  f.type = 'bandpass';
+  f.frequency.value = freq;
+  f.Q.value = 1.5;
+  g.gain.value = vol;
+  src.buffer = buf;
+  src.connect(f).connect(g).connect(audio.destination);
+  src.start();
+}
+
 function hurt(n) {
   if (cheat.god || hp <= 0) return;
+  sound(260, 0.45, 0.2);
   hp -= n;
   hurtAt = clock;
   $('.hurt').animate([{ opacity: 0.45 }, { opacity: 0 }], 400);
@@ -803,7 +853,7 @@ function mine(r, dt) {
   mining.p = target && target === mining.target ? mining.p + dt / digTime(get(...r.hit)) : 0;
   mining.target = target;
   mining.tick += dt;
-  if (target && mining.tick > 0.2) { mining.tick = 0; burst(r.hit, get(...r.hit), 1, r.prev); }
+  if (target && mining.tick > 0.2) { mining.tick = 0; burst(r.hit, get(...r.hit), 1, r.prev); sound(tone(get(...r.hit)), 0.12, 0.08); }
   if (mining.p >= 1 && r.hit[1] > 0) { dig(r.hit); mining.p = 0; }
   crack.visible = mining.p > 0;
   crack.position.copy(outline.position);
@@ -849,6 +899,7 @@ function place() {
   if (id === DOOR && (y + 1 >= H || solid(get(x, y + 1, z)) || inside(y + 1))) return;
   if (!cheat.infinite && !--slots[sel].n) slots[sel] = null;
   swing ||= 0.01;
+  sound(tone(put), 0.3, 0.15);
   set(x, y, z, put);
   if (id === DOOR) set(x, y + 1, z, put + 8);
   if (id === CHEST) { chests[[x, y, z].join()] = {}; saveChests(); }
@@ -865,6 +916,7 @@ function sleep(hit) {
 function eat(id) {
   if (hp >= 20) return toast('Non hai fame');
   hp = Math.min(20, hp + FOOD[id]);
+  sound(1800, 0.25, 0.3);
   if (!cheat.infinite && !--slots[sel].n) slots[sel] = null;
   swing ||= 0.01;
   drawInv();
@@ -880,13 +932,17 @@ function facing() {
 function toggleDoor([x, y, z]) {
   const base = get(x, y, z) - 40 & 8 ? y - 1 : y;
   for (const yy of [base, base + 1]) if (isDoor(get(x, yy, z))) set(x, yy, z, get(x, yy, z) ^ 4);
+  sound(700, 0.3, 0.12);
   swing ||= 0.01;
 }
 
 function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
   const lava = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === LAVA);
-  drop(isDoor(id) ? DOOR : DROP[id] ?? id, 1, x + 0.5, y + 0.5, z + 0.5);
+  const out = isDoor(id) ? DOOR : DROP[id] ?? id, above = get(x, y + 1, z);
+  if (out) drop(out, 1, x + 0.5, y + 0.5, z + 0.5);
+  if (PLANTS.includes(above) || above === TORCH) { if (DROP[above] ?? above) drop(DROP[above] ?? above, 1, x + 0.5, y + 1.5, z + 0.5); set(x, y + 1, z, AIR, false); }
+  sound(tone(id), 0.35, 0.22);
   const other = y + (id - 40 & 8 ? -1 : 1);
   if (isDoor(id) && isDoor(get(x, other, z))) set(x, other, z, AIR);
   if (id === CHEST) {
@@ -901,9 +957,9 @@ function dig([x, y, z]) {
 
 function drop(id, n, x, y, z) {
   const sprite = !BLOCKS[id] || id === TORCH, [top, bottom, side] = BLOCKS[id] ?? [], group = new THREE.Group();
-  const mesh = new THREE.Mesh(sprite ? new THREE.PlaneGeometry(0.35, 0.35) : new THREE.BoxGeometry(0.25, 0.25, 0.25), sprite ? bitMat : dropCube);
-  if (!sprite) mesh.geometry.setAttribute('color', SHADE);
-  setTile(mesh, sprite ? [ICON[id]] : [side, side, top, bottom, side, side]);
+  const mesh = new THREE.Mesh(sprite ? itemGeo(ICON[id]) : new THREE.BoxGeometry(0.25, 0.25, 0.25), sprite ? bitMat : dropCube);
+  if (sprite) mesh.scale.setScalar(0.4);
+  else { mesh.geometry.setAttribute('color', SHADE); setTile(mesh, [side, side, top, bottom, side, side]); }
   group.position.set(x, y, z);
   group.add(mesh);
   scene.add(group);
@@ -923,7 +979,8 @@ function updateDrops(dt) {
     d.mesh.position.y = 0.15 + Math.sin(d.age * 3) * 0.06;
     const near = d.age > 0.5 && dist < 0.6 && hp > 0, left = near ? give(d.id, d.n) : d.n, pick = near && !left, burnt = get(...g.position.toArray().map(Math.floor)) === LAVA;
     if (left !== d.n) { d.n = left; drawInv(); }
-    if (pick || burnt) { scene.remove(g); d.mesh.geometry.dispose(); drops.splice(drops.indexOf(d), 1); }
+    if (pick) sound(2600, 0.1, 0.05);
+    if (pick || burnt) { scene.remove(g); if (d.mesh.geometry.type === 'BoxGeometry') d.mesh.geometry.dispose(); drops.splice(drops.indexOf(d), 1); }
   }
 }
 
@@ -1013,8 +1070,31 @@ function attack(a) {
   a.yaw = Math.atan2(dir.x, dir.z);
   a.vel.set(dir.x * 6, 5, dir.z * 6);
   swing ||= 0.01;
+  sound(600, 0.35, 0.12);
   if (a.hp > 0) return;
   for (const [id, lo, hi] of ANIMALS[a.type].drops) { const n = lo + (rnd() * (hi - lo + 1) | 0); if (n) drop(id, n, p.x, p.y + 0.5, p.z); }
+}
+
+function itemGeo(tile) {
+  if (itemGeos.has(tile)) return itemGeos.get(tile);
+  const img = atlas.getContext('2d').getImageData(tile * 16, 0, 16, 16).data, on = (x, y) => x >= 0 && x < 16 && y >= 0 && y < 16 && img[(y * 16 + x) * 4 + 3] > 127;
+  const pos = [], nor = [], uv = [], T = 1 / 32, U = k => (tile * 16 + k) / atlas.width;
+  const quad4 = (cs, n, uvs) => [0, 1, 2, 2, 1, 3].forEach(i => { pos.push(...cs[i]); nor.push(...n); uv.push(...uvs[i]); });
+  const full = [[U(0.1), 1], [U(0.1), 0], [U(15.9), 1], [U(15.9), 0]];
+  for (const z of [T, -T]) quad4([[-0.5, 0.5, z], [-0.5, -0.5, z], [0.5, 0.5, z], [0.5, -0.5, z]], [0, 0, Math.sign(z)], full);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (on(x, y)) {
+    const x0 = x / 16 - 0.5, x1 = x0 + 1 / 16, y1 = 0.5 - y / 16, y0 = y1 - 1 / 16, c = Array(4).fill([U(x + 0.5), 1 - (y + 0.5) / 16]);
+    if (!on(x - 1, y)) quad4([[x0, y0, -T], [x0, y0, T], [x0, y1, -T], [x0, y1, T]], [-1, 0, 0], c);
+    if (!on(x + 1, y)) quad4([[x1, y0, -T], [x1, y0, T], [x1, y1, -T], [x1, y1, T]], [1, 0, 0], c);
+    if (!on(x, y - 1)) quad4([[x0, y1, -T], [x1, y1, -T], [x0, y1, T], [x1, y1, T]], [0, 1, 0], c);
+    if (!on(x, y + 1)) quad4([[x0, y0, -T], [x1, y0, -T], [x0, y0, T], [x1, y0, T]], [0, -1, 0], c);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  itemGeos.set(tile, geo);
+  return geo;
 }
 
 function setTile(mesh, tiles) {
@@ -1029,7 +1109,7 @@ function hold(id) {
   cube.visible = !!id && !sprite;
   flat.visible = !!id && sprite;
   if (cube.visible) setTile(cube, [side, side, top, bottom, side, side]);
-  if (flat.visible) setTile(flat, [ICON[id]]);
+  if (flat.visible) flat.geometry = itemGeo(ICON[id]);
 }
 
 function animateHand(r, dt) {
@@ -1131,6 +1211,8 @@ function setPlaying(on) {
 }
 
 function start() {
+  audio ??= new AudioContext();
+  audio.resume();
   if (!touch) return document.body.requestPointerLock();
   document.documentElement.requestFullscreen?.().then(() => screen.orientation.lock('landscape'));
   setPlaying(true);
@@ -1188,6 +1270,11 @@ function sky(dt) {
   sun.position.add(c);
   sun.lookAt(c);
   moon.lookAt(c);
+  clouds.position.set(c.x, 118, c.z);
+  cloudTex.offset.set((c.x + clock * 2) / 512, -c.z / 512);
+  clouds.material.color.setScalar(0.04 + 0.96 * light * light);
+  stars.position.copy(c);
+  stars.material.opacity = 1 - light;
 }
 
 function lightTorches() {
@@ -1218,7 +1305,12 @@ function loop(t) {
   if (dt) update(dt);
   if ((flowT += dt) > 0.25) { flowT = 0; flowTick(); }
   streamChunks();
-  camera.position.set(p.pos.x, p.pos.y + 1.62, p.pos.z);
+  const pace = Math.hypot(p.vel.x, p.vel.z), walking = dt && p.ground && pace > 1;
+  bobAmp += ((walking ? 1 : 0) - bobAmp) * 0.15;
+  bobT += dt * pace * 1.9;
+  if (walking && Math.floor(bobT / Math.PI) !== step) { step = Math.floor(bobT / Math.PI); sound(tone(get(Math.floor(p.pos.x), Math.floor(p.pos.y - 0.5), Math.floor(p.pos.z))), 0.05, 0.08); }
+  camera.position.set(p.pos.x, p.pos.y + 1.62 + Math.abs(Math.sin(bobT)) * 0.07 * bobAmp, p.pos.z);
+  hand.position.x = (touch ? 0.2 : 0.34) + Math.sin(bobT) * 0.015 * bobAmp;
   camera.rotation.set(p.pitch, p.yaw, 0);
   sky(dt);
   const hitBlock = raycast(), target = aimAnimal(hitBlock), r = target ? null : hitBlock;
