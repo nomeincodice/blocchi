@@ -11,6 +11,7 @@
     --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --pad: 60px;
     --gui: #c6c6c6; --gui-hi: #fff; --gui-lo: #555; --gui-slot: #8b8b8b; --gui-hover: #d8d8e8; --ink: #3f3f3f; --edge: #000;
     --heart: #e0282e; --heart-empty: #0007; --air: #9cf;
+    --logo: #e6e6e6; --logo-shadow: #555; --splash: #ffff55; --btn: #7a7a7a; --btn-hi: #aaa; --btn-lo: #444; --btn-hover: #7a86c2;
     --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); --bottom: max(12px, env(safe-area-inset-bottom));
   }
   body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -26,7 +27,6 @@
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
   .icon { width: var(--s); height: var(--s); flex: none; display: flex; align-items: end; justify-content: end; font-size: 13px; color: var(--hud); text-shadow: 0 1px 2px var(--edge); background: var(--img) calc(var(--t) * -1 * var(--s)) 0 / calc(var(--n) * var(--s)) var(--s); image-rendering: pixelated; }
   .bar { position: fixed; left: 50%; bottom: var(--bottom); translate: -50% 0; max-width: calc(100vw - 2 * var(--right) - 4 * var(--pad)); display: flex; gap: 6px; padding: 6px; overflow-x: auto; scrollbar-width: none; background: var(--slot); }
-  .bar:empty { display: none; }
   .bar .on { outline: 3px solid var(--pick); outline-offset: -3px; }
   .stack { display: grid; gap: 8px; }
   .cols { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); width: min(60rem, 86vw); }
@@ -42,11 +42,19 @@
   .grid9 { width: min(calc(9 * (var(--s) + 10px)), 86vw); }
   .slot:empty::before { content: ''; display: block; width: var(--s); height: var(--s); }
   .slot { padding: 3px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo), inset -2px -2px var(--gui-hi); }
-  .inv:empty { display: none; }
+  .all:empty { display: none; }
+  .slot.on { outline: 3px solid var(--pick); outline-offset: -3px; }
+  .logo { margin: 0; font-size: clamp(44px, 13vh, 104px); letter-spacing: 6px; color: var(--logo); text-shadow: 4px 4px 0 var(--logo-shadow), 8px 8px 0 var(--edge); }
+  .splash { margin: -12px 0 12px; color: var(--splash); text-shadow: 2px 2px var(--logo-shadow); rotate: -8deg; translate: 110px 0; animation: pulse 0.6s ease-in-out alternate infinite; }
+  @keyframes pulse { to { scale: 1.12; } }
+  .mcbtn { box-sizing: border-box; width: min(22rem, 80vw); padding: 10px; font: inherit; color: var(--hud); text-shadow: 2px 2px var(--ink); background: var(--btn); border: 2px solid var(--edge); box-shadow: inset 2px 2px var(--btn-hi), inset -2px -3px var(--btn-lo); cursor: pointer; }
+  .mcbtn:hover { background: var(--btn-hover); }
+  .help summary { list-style: none; }
+  .help p { max-width: min(40rem, 86vw); padding: 10px; background: var(--shade); }
   .recipe { display: grid; gap: 4px; justify-items: center; padding: 8px; font: inherit; font-size: 13px; color: var(--ink); background: var(--gui); border: 2px solid var(--edge); box-shadow: inset 2px 2px var(--gui-hi), inset -2px -2px var(--gui-lo); cursor: pointer; }
   .recipe:hover:enabled { background: var(--gui-hover); }
   .recipe:disabled { opacity: 0.45; cursor: default; }
-  .start { cursor: pointer; }
+  .start { backdrop-filter: blur(4px); }
   .rotate { display: none; }
   .pad { position: fixed; right: var(--right); bottom: var(--bottom); display: grid; grid-template-columns: repeat(2, var(--pad)); gap: 10px; }
   .pad button { height: var(--pad); padding: 0; font-size: calc(var(--pad) * 0.42); border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
@@ -74,15 +82,22 @@
   <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
   <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
 </div>
-<button class="corner touch" data-key="KeyC">🪄</button>
-<div class="panel stack start"><h1>Blocchi</h1>
-  <p class="mouse">Clicca per giocare</p>
-  <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E crafting · C trucchi<br>Tieni premuto click sinistro per rompere · Click destro piazza o apre i bauli · 1-9 o rotella scegli blocco · Esc pausa</p>
-  <p class="touch">Tocca per giocare</p>
-  <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ crafting · 🪄 trucchi</p>
+<button class="corner touch" data-key="Pause">⏸</button>
+<div class="panel stack start">
+  <h1 class="logo">BLOCCHI</h1><p class="splash">Senza rompimenti!</p>
+  <button class="mcbtn play">Gioca</button>
+  <button class="mcbtn" data-menu="craft">Inventario e crafting</button>
+  <button class="mcbtn" data-menu="cheat">Trucchi</button>
+  <details class="help"><summary class="mcbtn">Comandi</summary>
+    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
+    <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · ⏸ pausa</p>
+  </details>
+  <button class="mcbtn fresh">Nuovo mondo</button>
 </div>
 <div class="panel stack craft" style="display: none">
-  <div class="gui stack"><div class="row head"><h2>Crafting</h2><button class="btn close">✕</button></div><div class="row inv"></div><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
+  <div class="gui stack"><div class="row head"><h2>Inventario</h2><button class="btn close">✕</button></div>
+    <div class="row grid9 store"></div><div class="row grid9 hot"></div><div class="row all"></div>
+    <h2>Crafting</h2><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
 </div>
 <div class="panel stack chest" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 pack"></div></div>
@@ -92,6 +107,7 @@
     <label class="row"><input type="checkbox" class="xray"> Vista a raggi X: solo minerali e bauli</label>
     <label class="row"><input type="checkbox" class="instant"> Scavo istantaneo, anche senza attrezzi</label>
     <label class="row"><input type="checkbox" class="god"> Invincibile</label>
+    <label class="row"><input type="checkbox" class="infinite"> Roba infinita: prendi tutto dall'inventario, niente si consuma</label>
   </div>
 </div>
 <div class="panel stack dead" style="display: none"><h1>Sei morto!</h1><p>Tieni tutto l'inventario</p><button class="btn close">Rinasci</button></div>
@@ -192,7 +208,7 @@ for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_
 const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !(isDoor(b) && b - 40 & 4);
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, REDSTONE_ORE, LAPIS_ORE, EMERALD_ORE, COPPER_ORE, CHEST];
-const cheat = { xray: false, instant: false, god: false };
+const cheat = { xray: false, instant: false, god: false, infinite: false };
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -316,9 +332,8 @@ item(EMERALD, 'Smeraldo', GEM([45, 205, 95]));
 item(COPPER, 'Lingotto di rame', INGOT([220, 120, 80]));
 [DPICK, DAXE, DSHOVEL].forEach((id, i) => item(id, ['Piccone', 'Ascia', 'Pala'][i] + ' di diamante', TOOLTILE(HEADS[i], [100, 235, 230])));
 const IDS = NAMES.map((_, id) => id);
-const PLACEABLE = IDS.filter(id => BLOCKS[id] && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
-const TOOL_IDS = Object.values(TOOLS).flat(), HOTBAR = [...TOOL_IDS, ...PLACEABLE, DOOR];
+const TOOL_IDS = Object.values(TOOLS).flat();
 const FACES = [
   [[-1, 0, 0], 0.6, 2, [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]]],
   [[1, 0, 0], 0.6, 2, [[1, 1, 1, 0, 1], [1, 0, 1, 0, 0], [1, 1, 0, 1, 1], [1, 0, 0, 1, 0]]],
@@ -328,7 +343,8 @@ const FACES = [
   [[0, 0, 1], 0.45, 2, [[0, 0, 1, 0, 0], [1, 0, 1, 1, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1]]],
 ];
 
-const hash = (x, z) => { let h = Math.imul(x, 374761393) + Math.imul(z, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 2 ** 32; };
+const SEED = +(localStorage.getItem('blocchi-seed') ?? 0);
+const hash = (x, z) => { let h = Math.imul(x, 374761393) + Math.imul(z, 668265263) + SEED | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 2 ** 32; };
 function noise(x, z) {
   const xi = Math.floor(x), zi = Math.floor(z), u = (x - xi) ** 2 * (3 - 2 * (x - xi)), v = (z - zi) ** 2 * (3 - 2 * (z - zi));
   const a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
@@ -643,12 +659,15 @@ camera.add(hand);
 
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0, peak: -Infinity };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
-const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), inv = IDS.map(i => saved?.inv[i] ?? 0);
+const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), slots = saved?.slots ?? Array(36).fill(null);
+const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
+const MAX = id => TOOL_IDS.includes(id) ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
+const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
 let chestAt = '';
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
-let flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
+let flowT = 0, sel = 0, cursor = null, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -730,7 +749,22 @@ function raycast() {
   }
 }
 
-const tier = type => (TOOLS[type]?.indexOf(sel) ?? -1) + 1;
+const tier = type => (TOOLS[type]?.indexOf(heldId()) ?? -1) + 1;
+
+function give(id, n) {
+  for (const s of slots) if (n && s?.id === id && s.n < MAX(id)) { const k = Math.min(n, MAX(id) - s.n); s.n += k; n -= k; }
+  for (let i = 0; i < 36 && n; i++) if (!slots[i]) { const k = Math.min(n, MAX(id)); slots[i] = { id, n: k }; n -= k; }
+  return n;
+}
+
+function take(id, n) {
+  for (let i = 35; i >= 0 && n; i--) if (slots[i]?.id === id) {
+    const k = Math.min(n, slots[i].n);
+    slots[i].n -= k;
+    n -= k;
+    if (!slots[i].n) slots[i] = null;
+  }
+}
 function digTime(id) {
   if (cheat.instant) return 0.15;
   const [t, type, min = 0] = HARD[id], k = tier(type);
@@ -775,16 +809,16 @@ function updateBits(dt) {
 }
 
 function place() {
-  const r = raycast(), p = player.pos, id = sel;
+  const r = raycast(), p = player.pos, id = heldId();
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
-  if (!r?.prev || !inv[id] || !BLOCKS[id] && id !== DOOR) return;
+  if (!r?.prev || !id || !BLOCKS[id] && id !== DOOR) return;
   const [x, y, z] = r.prev, [dx, dy, dz] = r.prev.map((v, i) => v - r.hit[i]);
   const inside = y => x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3;
   const put = id === DOOR ? 40 + facing() : id !== TORCH || dy === 1 ? id : dy === -1 ? 0 : dx === 1 ? 35 : dx === -1 ? 36 : dz === 1 ? 37 : 38;
   if (!put || y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || inside(y)) return;
   if (id === DOOR && (y + 1 >= H || solid(get(x, y + 1, z)) || inside(y + 1))) return;
-  inv[id]--;
+  if (!cheat.infinite && !--slots[sel].n) slots[sel] = null;
   swing ||= 0.01;
   set(x, y, z, put);
   if (id === DOOR) set(x, y + 1, z, put + 8);
@@ -841,8 +875,8 @@ function updateDrops(dt) {
     else g.position.copy(next);
     d.mesh.rotation.y += dt * 2;
     d.mesh.position.y = 0.15 + Math.sin(d.age * 3) * 0.06;
-    const pick = d.age > 0.5 && dist < 0.6 && hp > 0, burnt = get(...g.position.toArray().map(Math.floor)) === LAVA;
-    if (pick) { inv[d.id] += d.n; drawInv(); }
+    const near = d.age > 0.5 && dist < 0.6 && hp > 0, left = near ? give(d.id, d.n) : d.n, pick = near && !left, burnt = get(...g.position.toArray().map(Math.floor)) === LAVA;
+    if (left !== d.n) { d.n = left; drawInv(); }
     if (pick || burnt) { scene.remove(g); d.mesh.geometry.dispose(); drops.splice(drops.indexOf(d), 1); }
   }
 }
@@ -864,15 +898,13 @@ function hold(id) {
 
 function animateHand(r, dt) {
   const digging = !!(keys.Dig && r);
-  if (sel !== held) hold(sel);
+  if (heldId() !== held) hold(heldId());
   if (digging || swing > 0) swing += dt * 12;
   if (swing > Math.PI) swing = digging ? swing - Math.PI : 0;
   const s = Math.sin(swing);
   hand.rotation.set(-s * 0.9, s * 0.35, s * 0.15);
   hand.position.y = -0.3 + s * 0.06;
 }
-
-const owned = () => HOTBAR.filter(id => inv[id] > 0);
 
 function icon(id, n) {
   const d = document.createElement('div');
@@ -890,34 +922,67 @@ function slot(id, n) {
   return s;
 }
 
-function choose(id) {
-  sel = id;
+function choose(i) {
+  sel = i;
   drawInv();
 }
 
+function pick(i) {
+  const a = slots[cursor], b = slots[i];
+  if (cursor === null || cursor === i) cursor = cursor === null && b ? i : null;
+  else if (b?.id === a.id && b.n < MAX(b.id)) {
+    const k = Math.min(a.n, MAX(b.id) - b.n);
+    b.n += k;
+    a.n -= k;
+    if (!a.n) slots[cursor] = null;
+    cursor = null;
+  } else { [slots[cursor], slots[i]] = [b, a]; cursor = null; }
+  drawInv();
+}
+
+function slotEl(i, click) {
+  const s = slots[i], d = s ? slot(s.id, s.n > 1 ? s.n : '') : Object.assign(document.createElement('div'), { className: 'slot' });
+  d.classList.toggle('on', i === cursor);
+  d.onclick = () => click(i);
+  return d;
+}
+
 function drawInv() {
-  if (!inv[sel]) sel = owned()[0] ?? 0;
-  $('.bar').replaceChildren(...owned().map(id => {
-    const d = icon(id, inv[id]);
-    d.classList.toggle('on', id === sel);
-    d.onclick = () => choose(id);
+  $('.bar').replaceChildren(...slots.slice(0, 9).map((s, i) => {
+    const d = s ? icon(s.id, s.n > 1 ? s.n : '') : Object.assign(document.createElement('div'), { className: 'icon' });
+    d.classList.toggle('on', i === sel);
+    d.onclick = () => choose(i);
     return d;
   }));
-  $('.inv').replaceChildren(...IDS.filter(id => inv[id] > 0).map(id => slot(id, inv[id])));
+  $('.store').replaceChildren(...slots.slice(9).map((_, i) => slotEl(i + 9, pick)));
+  $('.hot').replaceChildren(...slots.slice(0, 9).map((_, i) => slotEl(i, pick)));
+  $('.all').replaceChildren(...(cheat.infinite ? ITEMS : []).map(id => {
+    const d = slot(id, '');
+    d.onclick = () => { give(id, MAX(id)); drawInv(); };
+    return d;
+  }));
 }
 
 function drawCraft() {
-  const can = ([need]) => Object.entries(need).every(([id, k]) => inv[id] >= k);
+  const can = ([need]) => cheat.infinite || Object.entries(need).every(([id, k]) => count(+id) >= k);
   $('.recipes').replaceChildren(...RECIPES.filter(r => !$('.can').checked || can(r)).map(([need, out, n]) => {
     const b = document.createElement('button'), row = document.createElement('div');
     b.className = 'recipe';
     row.className = 'row';
     row.append(...Object.entries(need).map(([id, k]) => slot(id, k)), '→', slot(out, n));
     b.append(row, NAMES[out]);
-    b.disabled = Object.entries(need).some(([id, k]) => inv[id] < k) || TOOL_IDS.includes(out) && inv[out] > 0;
-    b.onclick = () => { for (const [id, k] of Object.entries(need)) inv[id] -= k; inv[out] += n; drawInv(); drawCraft(); };
+    b.disabled = !can([need]) || TOOL_IDS.includes(out) && count(out) > 0;
+    b.onclick = () => craft(need, out, n);
     return b;
   }));
+}
+
+function craft(need, out, n) {
+  if (!cheat.infinite) for (const [id, k] of Object.entries(need)) take(+id, k);
+  const left = give(out, n);
+  if (left) drop(out, left, player.pos.x, player.pos.y + 1, player.pos.z);
+  drawInv();
+  drawCraft();
 }
 
 const MENUS = ['craft', 'chest', 'cheat', 'dead'];
@@ -926,6 +991,7 @@ const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 function setPlaying(on) {
   playing = on;
   $('.start').style.display = on || menu() ? 'none' : '';
+  if (on) $('.play').textContent = 'Riprendi';
 }
 
 function start() {
@@ -938,6 +1004,8 @@ function openMenu(name) {
   for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
   if (!name && hp <= 0) { hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity; spawn(); }
   if (!name) return start();
+  cursor = null;
+  drawInv();
   if (name === 'craft') drawCraft();
   if (name === 'chest') drawChest();
   setPlaying(false);
@@ -958,12 +1026,12 @@ function openChest(hit) {
 }
 
 function drawChest() {
-  const box = chests[chestAt], items = Object.entries(box).filter(([, n]) => n > 0);
-  const move = (from, to, id) => { to[id] = (to[id] ?? 0) + from[id]; from[id] = 0; saveChests(); drawInv(); drawChest(); };
-  const cell = (from, to, id, n) => { const c = slot(id, n); c.onclick = () => move(from, to, id); return c; };
+  const box = chests[chestAt], items = Object.entries(box).filter(([, n]) => n > 0), done = () => { saveChests(); drawInv(); drawChest(); };
+  const out = ([id, n]) => { const c = slot(id, n); c.onclick = () => { box[id] = give(+id, n); done(); }; return c; };
+  const stash = i => { box[slots[i].id] = (box[slots[i].id] ?? 0) + slots[i].n; slots[i] = null; done(); };
   const empty = Array.from({ length: Math.max(0, 27 - items.length) }, () => Object.assign(document.createElement('div'), { className: 'slot' }));
-  $('.box').replaceChildren(...items.map(([id, n]) => cell(box, inv, id, n)), ...empty);
-  $('.pack').replaceChildren(...IDS.filter(id => inv[id] > 0).map(id => cell(inv, box, id, inv[id])));
+  $('.box').replaceChildren(...items.map(out), ...empty);
+  $('.pack').replaceChildren(...slots.map((s, i) => slotEl(i, () => s && stash(i))));
 }
 
 function sky(dt) {
@@ -994,7 +1062,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !cheat.instant && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[sel] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}`;
 }
 
 function spawn() {
@@ -1026,7 +1094,7 @@ function loop(t) {
   camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
   camera.updateProjectionMatrix();
   lightTorches();
-  handLight.intensity = sel === TORCH || GLOW.includes(sel) ? 5 : 0;
+  handLight.intensity = heldId() === TORCH || GLOW.includes(heldId()) ? 5 : 0;
   handLight.position.copy(camera.position);
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
@@ -1034,7 +1102,8 @@ function loop(t) {
 
 onkeydown = e => {
   keys[e.code] = true;
-  if (/^Digit[1-9]$/.test(e.code)) choose(owned()[e.code[5] - 1] ?? sel);
+  if (/^Digit[1-9]$/.test(e.code)) choose(e.code[5] - 1);
+  if (e.code === 'Pause' || e.code === 'Escape' && menu()) openMenu('pause');
   if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel.y = 0; }
   if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
   if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
@@ -1044,10 +1113,9 @@ onkeyup = e => keys[e.code] = false;
 onwheel = e => {
   wheel += e.deltaY;
   if (Math.abs(wheel) < 100 || e.timeStamp - wheelAt < 150) return;
-  const own = owned(), i = own.indexOf(sel) + Math.sign(wheel);
-  wheel = 0;
   wheelAt = e.timeStamp;
-  choose(own[(i + own.length) % own.length] ?? 0);
+  choose((sel + Math.sign(wheel) + 9) % 9);
+  wheel = 0;
 };
 onmousemove = e => { if (document.pointerLockElement) look(e.movementX, e.movementY, 0.002); };
 onpointerdown = e => {
@@ -1079,8 +1147,17 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), inv, time, hp }));
-$('.start').onclick = start;
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp }));
+$('.play').onclick = start;
+for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
+$('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
+$('.fresh').onclick = () => {
+  if (!confirm('Cancellare questo mondo e crearne uno nuovo?')) return;
+  for (const k of ['blocchi', 'blocchi-save', 'blocchi-chests']) localStorage.removeItem(k);
+  localStorage.setItem('blocchi-seed', Math.random() * 1e9 | 0);
+  document.onvisibilitychange = null;
+  location.reload();
+};
 for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
 $('.instant').onchange = e => cheat.instant = e.target.checked;
 $('.can').onchange = drawCraft;
@@ -1093,6 +1170,7 @@ document.onpointerlockchange = () => setPlaying(!!document.pointerLockElement);
 
 document.body.style.setProperty('--n', TILES.length);
 document.body.style.setProperty('--img', `url(${atlas.toDataURL()})`);
+if (saved?.inv && !saved.slots) saved.inv.forEach((n, id) => n > 0 && give(id, n));
 drawInv();
 if (saved) player.pos.fromArray(saved.pos); else spawn();
 requestAnimationFrame(loop);
