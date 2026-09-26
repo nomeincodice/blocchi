@@ -816,7 +816,21 @@ function moveAxis(a, d) {
   player.vel.y = 0;
 }
 
+function ride(dt) {
+  const p = player, u = p.riding, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
+  u.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * 9;
+  u.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * 9;
+  if (f || s) u.yaw = Math.atan2(u.vel.x, u.vel.z);
+  if (keys.ShiftLeft && u.ground) { p.riding = null; p.pos.copy(u.g.position).x += 1.2; p.peak = -Infinity; return; }
+  u.vel.y = keys.Space ? 7 : keys.ShiftLeft ? -6 : u.ground ? u.vel.y : Math.max(u.vel.y, -2.5);
+  p.pos.copy(u.g.position).y += 1.2;
+  p.vel.set(0, 0, 0);
+  p.peak = p.pos.y;
+  vitals(dt, false);
+}
+
 function update(dt) {
+  if (player.riding) return ride(dt);
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   const fluid = p.fly ? AIR : get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)), swim = FLUID.includes(fluid);
   const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (fluid === LAVA ? 0.4 : swim ? 0.6 : 1);
@@ -953,19 +967,31 @@ function burst(hit, id, n, face) {
   }
 }
 
+const sparkGeo = new THREE.PlaneGeometry(0.12, 0.12);
+function sparkle(p) {
+  const b = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: choice(RAINBOW), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  b.position.set(p.x + rnd() - 0.5, p.y + rnd() * 2, p.z + rnd() - 0.5);
+  b.userData = { vel: new THREE.Vector3(0, 0.6, 0), life: 1.2, float: true };
+  scene.add(b);
+  bits.push(b);
+}
+
 function updateBits(dt) {
   for (const b of [...bits]) {
     const d = b.userData, next = b.position.clone().addScaledVector(d.vel, dt);
     d.life -= dt;
-    d.vel.y -= 18 * dt;
-    if (solid(get(...next.toArray().map(Math.floor)))) d.vel.set(0, 0, 0); else b.position.copy(next);
+    if (d.float) b.material.opacity = Math.min(1, d.life);
+    else d.vel.y -= 18 * dt;
+    if (!d.float && solid(get(...next.toArray().map(Math.floor)))) d.vel.set(0, 0, 0); else b.position.copy(next);
     b.quaternion.copy(camera.quaternion);
-    if (d.life <= 0) { scene.remove(b); b.geometry.dispose(); bits.splice(bits.indexOf(b), 1); }
+    if (d.life <= 0) { scene.remove(b); (d.float ? b.material : b.geometry).dispose(); bits.splice(bits.indexOf(b), 1); }
   }
 }
 
 function place() {
-  const r = raycast(), p = player.pos, id = heldId();
+  const r = raycast(), p = player.pos, id = heldId(), t = aimAnimal(r);
+  if (t?.type === 'person') return toast(`${t.name}: ${choice(PHRASES)}`);
+  if (t?.type === 'unicorn') { player.riding = t; return toast('In sella! Spazio per volare, Shift per scendere'); }
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
@@ -1076,29 +1102,75 @@ function updateDrops(dt) {
   }
 }
 
+const lambert = color => new THREE.MeshLambertMaterial({ color, vertexColors: true }), choice = a => a[rnd() * a.length | 0];
+function part(g, w, h, d, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.geometry.setAttribute('color', SHADE);
+  g.add(m);
+  return m;
+}
+
+const RAINBOW = ['#ff8fab', '#ffc46b', '#fff36b', '#8ff0a4', '#8fc9ff', '#c49bff'];
 const ANIMALS = {
-  pig: { color: ['#f0a8a8', '#e08c8c'], body: [0.62, 0.5, 0.95, 0.55], head: [0.5, 0.45, 0.45, 0.72], leg: [0.2, 0.3], hp: 6, drops: [[PORK, 1, 3]], extra: [0.26, 0.18, 0.08, 0.66, '#d97a7a'] },
+  pig: { color: ['#f0a8a8', '#e08c8c'], body: [0.62, 0.5, 0.95, 0.55], head: [0.5, 0.45, 0.45, 0.72], leg: [0.2, 0.3], hp: 6, drops: [[PORK, 1, 3]], extras: [[0.26, 0.18, 0.08, 0.66, 0.93, '#d97a7a']] },
   cow: { color: ['#4a3426', '#dcdcdc'], body: [0.75, 0.7, 1.1, 0.95], head: [0.5, 0.5, 0.4, 1.15], leg: [0.24, 0.6], hp: 8, drops: [[BEEF, 1, 3], [LEATHER, 0, 2]] },
   sheep: { color: ['#eeeeee', '#c9b8a6'], body: [0.8, 0.7, 1.05, 0.9], head: [0.4, 0.42, 0.45, 1.1], leg: [0.2, 0.55], hp: 6, drops: [[WOOL, 1, 2], [MUTTON, 1, 2]] },
-  chicken: { color: ['#f4f4f4', '#e8a33c'], body: [0.35, 0.35, 0.45, 0.45], head: [0.25, 0.3, 0.2, 0.75], leg: [0.06, 0.3], hp: 3, drops: [[CHICKEN, 1, 1], [FEATHER, 0, 2]], extra: [0.12, 0.08, 0.12, 0.74, '#e8a33c'] },
+  chicken: { color: ['#f4f4f4', '#e8a33c'], body: [0.35, 0.35, 0.45, 0.45], head: [0.25, 0.3, 0.2, 0.75], leg: [0.06, 0.3], hp: 3, drops: [[CHICKEN, 1, 1], [FEATHER, 0, 2]], extras: [[0.12, 0.08, 0.12, 0.74, 0.42, '#e8a33c']] },
+  unicorn: { color: ['#fdfaff', '#fdfaff'], body: [0.7, 0.75, 1.4, 1.25], head: [0.42, 0.5, 0.75, 1.85], leg: [0.22, 0.9], hp: 99, drops: [],
+    extras: [[0.09, 0.5, 0.09, 2.35, 1.2, '#ffd84d'], ...RAINBOW.flatMap((c, i) => [[0.16, 0.2, 0.16, 2.02 - i * 0.1, 0.55 - i * 0.1, c], [0.16, 0.22, 0.16, 1.4 - i * 0.1, -0.75 - i * 0.03, c]])] },
 };
 
 function makeAnimal(type, x, y, z) {
-  const t = ANIMALS[type], g = new THREE.Group(), mats = [...t.color, t.extra?.[4] ?? '#000'].map(color => new THREE.MeshLambertMaterial({ color, vertexColors: true }));
-  const box = (w, h, d, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.geometry.setAttribute('color', SHADE); g.add(m); return m; };
+  const t = ANIMALS[type], g = new THREE.Group(), [body, head] = t.color.map(lambert), extras = (t.extras ?? []).map(e => lambert(e[5]));
   const [bw, bh, bd, by] = t.body, [hw, hh, hd, hy] = t.head, [lw, lh] = t.leg;
-  box(bw, bh, bd, mats[0]).position.y = by;
-  box(hw, hh, hd, type === 'chicken' ? mats[0] : mats[1]).position.set(0, hy, bd / 2 + hd / 2 - 0.08);
-  if (t.extra) box(t.extra[0], t.extra[1], t.extra[2], mats[2]).position.set(0, t.extra[3], bd / 2 + hd);
+  part(g, bw, bh, bd, body).position.y = by;
+  part(g, hw, hh, hd, type === 'chicken' ? body : head).position.set(0, hy, bd / 2 + hd / 2 - 0.08);
+  (t.extras ?? []).forEach((e, i) => part(g, e[0], e[1], e[2], extras[i]).position.set(0, e[3], e[4]));
   const legs = [[-1, -1], [1, -1], [-1, 1], [1, 1]].slice(type === 'chicken' ? 2 : 0).map(([sx, sz]) => {
-    const l = box(lw, lh, lw, mats[1]);
+    const l = part(g, lw, lh, lw, head);
     l.geometry.translate(0, -lh / 2, 0);
     l.position.set(sx * (bw / 2 - lw / 2), lh, type === 'chicken' ? 0 : sz * (bd / 2 - lw / 2 - 0.05));
     return l;
   });
   g.position.set(x, y, z);
   scene.add(g);
-  animals.push({ type, g, legs, mats, vel: new THREE.Vector3(), yaw: rnd() * 6.28, hp: t.hp, timer: 0, walk: false, flee: 0, hurt: 0, ground: false });
+  animals.push({ type, g, legs, mats: [body, head, ...extras], vel: new THREE.Vector3(), yaw: rnd() * 6.28, hp: t.hp, timer: 0, walk: false, flee: 0, hurt: 0, ground: false });
+}
+
+const SHIRTS = ['#ff8fab', '#8fc9ff', '#8ff0a4', '#c49bff', '#ffc46b', '#fff36b'], PANTS = ['#3b5bdb', '#495057', '#7950f2', '#2b8a3e'];
+const SKINS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524'], HAIR = ['#3b2314', '#e6be8a', '#1c1c1c', '#b55239', '#f5f5f5'];
+const PEOPLE = ['Anna', 'Luca', 'Sofia', 'Marco', 'Giulia', 'Leo', 'Emma', 'Tommaso', 'Aurora', 'Pietro'];
+const PHRASES = ['Ciao!', 'Che bella giornata!', 'Hai visto gli unicorni? Si possono cavalcare!', 'Attento alle macchine!', 'Ti piace la nostra città?',
+  'Di notte escono le lucciole ✨', 'Sto andando a fare la spesa', 'Adoro i fiori lilla', 'Hai già un letto? Di notte si dorme!', 'Nelle grotte ci sono bauli pieni di tesori'];
+
+function makePerson(x, y, z, city) {
+  const g = new THREE.Group(), [shirt, pants, skin, hair] = [SHIRTS, PANTS, SKINS, HAIR].map(a => lambert(choice(a)));
+  const limb = (w, h, mat, x, top) => { const l = part(g, w, h, w, mat); l.geometry.translate(0, -h / 2, 0); l.position.set(x, top, 0); return l; };
+  part(g, 0.5, 0.7, 0.28, shirt).position.y = 1.1;
+  part(g, 0.46, 0.46, 0.46, skin).position.y = 1.68;
+  part(g, 0.48, 0.14, 0.48, hair).position.y = 1.93;
+  const legs = [limb(0.22, 0.75, pants, -0.12, 0.75), limb(0.22, 0.75, pants, 0.12, 0.75)], arms = [limb(0.18, 0.68, shirt, -0.35, 1.44), limb(0.18, 0.68, shirt, 0.35, 1.44)];
+  g.position.set(x, y, z);
+  scene.add(g);
+  animals.push({ type: 'person', name: choice(PEOPLE), city, g, legs, arms, act: '', mats: [shirt, pants, skin, hair], vel: new THREE.Vector3(), yaw: rnd() * 6.28, hp: 99, timer: 0, walk: false, flee: 0, hurt: 0, ground: false });
+}
+
+function spawnPerson() {
+  const city = cityAt(player.pos.x, player.pos.z);
+  if (!city || animals.filter(a => a.type === 'person').length >= 8) return;
+  makePerson(city.cx + ((rnd() * 5 | 0) - 2) * 16 + 1.5, city.h + 1, city.cz + rnd() * 64 - 32, city);
+}
+
+function perform(a) {
+  const s = a.walk ? Math.sin(clock * 10) * 0.6 : 0;
+  a.arms[0].rotation.x = s;
+  a.arms[1].rotation.x = -s;
+  a.arms[1].rotation.z = a.act === 'wave' ? Math.sin(clock * 8) * 0.4 : 0;
+  if (a.act === 'wave') a.arms[1].rotation.x = Math.PI;
+  if (a.act !== 'dance') return;
+  a.yaw += 0.08;
+  a.arms[0].rotation.x = a.arms[1].rotation.x = Math.PI + Math.sin(clock * 10) * 0.3;
+  if (a.ground && rnd() < 0.03) a.vel.y = 4;
 }
 
 function spawnAnimal() {
@@ -1119,6 +1191,7 @@ function stepAnimal(a, dt) {
   a.vel.x *= 0.9;
   a.vel.z *= 0.9;
   a.vel.y = isWater(get(Math.floor(p.x), Math.floor(p.y + 0.3), Math.floor(p.z))) ? 1.5 : a.vel.y - 25 * dt;
+  if (a.vel.y > 0 && solid(get(Math.floor(p.x), Math.floor(p.y + a.vel.y * dt + 1.8), Math.floor(p.z)))) a.vel.y = 0;
   const ny = p.y + a.vel.y * dt;
   a.ground = a.vel.y <= 0 && solid(get(Math.floor(p.x), Math.floor(ny), Math.floor(p.z)));
   if (a.ground) { p.y = Math.floor(ny) + 1; a.vel.y = 0; } else p.y = ny;
@@ -1128,16 +1201,86 @@ function stepAnimal(a, dt) {
 }
 
 function updateAnimals(dt) {
-  if ((spawnT += dt) > 2) { spawnT = 0; spawnAnimal(); }
+  if ((spawnT += dt) > 2) { spawnT = 0; spawnAnimal(); spawnPerson(); }
   for (const a of [...animals]) {
     a.timer -= dt;
     a.flee -= dt;
     a.hurt -= dt;
-    if (a.timer < 0) { a.timer = 2 + rnd() * 4; a.walk = rnd() < 0.6; a.yaw = rnd() * 6.28; }
+    if (a === player.riding) { a.walk = false; if (dt) stepAnimal(a, dt); continue; }
+    if (a.timer < 0) {
+      a.timer = 2 + rnd() * 4; a.walk = rnd() < 0.6; a.yaw = rnd() * 6.28; a.act = a.walk ? '' : choice(['wave', 'dance', '', '']);
+      if (a.city && Math.hypot(a.g.position.x - a.city.cx, a.g.position.z - a.city.cz) > 40) { a.walk = true; a.yaw = Math.atan2(a.city.cx - a.g.position.x, a.city.cz - a.g.position.z); }
+    }
+    if (a.type === 'unicorn' && rnd() < dt * 5) sparkle(a.g.position);
     if (a.flee > 0) a.walk = true;
     for (const m of a.mats) m.emissive.setRGB(a.hurt > 0 ? 0.6 : 0, 0, 0);
     if (dt) stepAnimal(a, dt);
+    if (a.arms) perform(a);
     if (a.hp <= 0 || a.g.position.distanceTo(player.pos) > 70) removeAnimal(a);
+  }
+}
+
+const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], cars = [], flyers = [];
+function makeCar(city) {
+  const g = new THREE.Group(), mats = [choice(RAINBOW), '#d0ecff', '#222222', '#fff7b0'].map(lambert), [paint, glass, tire, light] = mats;
+  part(g, 1.7, 0.6, 3, paint).position.y = 0.6;
+  part(g, 1.5, 0.55, 1.6, glass).position.set(0, 1.17, -0.2);
+  part(g, 1.56, 0.08, 1.7, paint).position.set(0, 1.47, -0.2);
+  for (const [x, z] of [[-0.85, 1], [0.85, 1], [-0.85, -1], [0.85, -1]]) part(g, 0.3, 0.6, 0.6, tire).position.set(x, 0.3, z);
+  for (const x of [-0.55, 0.55]) part(g, 0.3, 0.18, 0.05, light).position.set(x, 0.65, 1.51);
+  g.position.set(city.cx + ((rnd() * 5 | 0) - 2) * 16 + 1.5, city.h + 1, city.cz + ((rnd() * 5 | 0) - 2) * 16 + 1.5);
+  scene.add(g);
+  cars.push({ g, city, dir: rnd() * 4 | 0, mats });
+}
+
+function drive(c, dt) {
+  const p = c.g.position, [dx, dz] = DIRS[c.dir], a = dx ? 'x' : 'z', before = p[a];
+  p.x += dx * 6 * dt;
+  p.z += dz * 6 * dt;
+  const k0 = Math.floor((before - 1.5) / 16), k1 = Math.floor((p[a] - 1.5) / 16);
+  if (k0 !== k1) {
+    p[a] = Math.max(k0, k1) * 16 + 1.5;
+    const ok = d => { const cx = Math.floor((p.x + Math.min(DIRS[d][0], 0) * 16) / 16), cz = Math.floor((p.z + Math.min(DIRS[d][1], 0) * 16) / 16); return Math.hypot(cx * 16 + 8 - c.city.cx, cz * 16 + 8 - c.city.cz) < 44; };
+    const opts = [0, 1, 2, 3].filter(d => d !== (c.dir + 2) % 4 && ok(d));
+    c.dir = opts.length ? choice(opts) : (c.dir + 2) % 4;
+  }
+  c.g.rotation.y = Math.atan2(DIRS[c.dir][0], DIRS[c.dir][1]);
+  const off = player.pos.clone().sub(p).setY(0);
+  if (off.length() < 1.8 && Math.abs(player.pos.y - p.y) < 2) player.pos.add(off.setLength(0.2));
+}
+
+function makeFlyer(kind) {
+  const g = new THREE.Group(), p = player.pos, bird = kind === 'bird', body = lambert(bird ? choice(['#ffffff', '#6fa8dc', '#e06666', '#666666']) : '#333333');
+  const wing = bird ? body : lambert(choice(RAINBOW));
+  part(g, bird ? 0.2 : 0.04, bird ? 0.18 : 0.04, bird ? 0.45 : 0.25, body);
+  const wings = [-1, 1].map(sx => { const w = part(g, bird ? 0.45 : 0.28, 0.02, bird ? 0.25 : 0.3, wing); w.geometry.translate(sx * (bird ? 0.22 : 0.14), 0, 0); return w; });
+  g.position.set(p.x + rnd() * 40 - 20, p.y + (bird ? 12 + rnd() * 10 : 1 + rnd() * 2), p.z + rnd() * 40 - 20);
+  scene.add(g);
+  flyers.push({ kind, g, wings, mats: [body, wing], vel: new THREE.Vector3(rnd() - 0.5, 0, rnd() - 0.5), t: rnd() * 10 });
+}
+
+function updateFlyers(dt, day) {
+  for (const kind of ['bird', 'butterfly']) if (day && flyers.filter(f => f.kind === kind).length < (kind === 'bird' ? 5 : 8) && rnd() < dt) makeFlyer(kind);
+  for (const f of [...flyers]) {
+    const bird = f.kind === 'bird', flap = Math.sin((f.t += dt) * (bird ? 12 : 25)) * (bird ? 0.7 : 1), pos = f.g.position;
+    f.wings[0].rotation.z = flap;
+    f.wings[1].rotation.z = -flap;
+    f.vel.x += (rnd() - 0.5) * dt * 3;
+    f.vel.z += (rnd() - 0.5) * dt * 3;
+    f.vel.setY(0).setLength(bird ? 5 : 1.2).setY(Math.sin(f.t * (bird ? 0.7 : 2)) * (bird ? 0.5 : 0.8));
+    pos.addScaledVector(f.vel, dt);
+    if (solid(get(Math.floor(pos.x), Math.floor(pos.y), Math.floor(pos.z)))) pos.y += 1;
+    f.g.rotation.y = Math.atan2(f.vel.x, f.vel.z);
+    if (pos.distanceTo(player.pos) > 60 || !day) { scene.remove(f.g); f.g.traverse(o => o.geometry?.dispose()); f.mats.forEach(m => m.dispose()); flyers.splice(flyers.indexOf(f), 1); }
+  }
+}
+
+function updateCars(dt) {
+  const city = cityAt(player.pos.x, player.pos.z);
+  if (city && cars.length < 5 && rnd() < dt) makeCar(city);
+  for (const c of [...cars]) {
+    if (dt) drive(c, dt);
+    if (c.g.position.distanceTo(player.pos) > 90) { scene.remove(c.g); c.g.traverse(o => o.geometry?.dispose()); c.mats.forEach(m => m.dispose()); cars.splice(cars.indexOf(c), 1); }
   }
 }
 
@@ -1150,12 +1293,13 @@ function removeAnimal(a) {
 
 function aimAnimal(r) {
   aim.setFromCamera(center, camera);
-  const hit = aim.intersectObjects(animals.map(a => a.g), true)[0], block = r ? camera.position.distanceTo(new THREE.Vector3(...r.hit).addScalar(0.5)) : Infinity;
-  return hit && hit.distance < Math.min(4, block) ? animals.find(a => a.g === hit.object.parent) : null;
+  const hit = aim.intersectObjects(animals.filter(a => a !== player.riding).map(a => a.g), true)[0], block = r ? camera.position.distanceTo(new THREE.Vector3(...r.hit).addScalar(0.5)) : Infinity;
+  return hit && hit.distance < Math.min(5, block) ? animals.find(a => a.g === hit.object.parent) : null;
 }
 
 function attack(a) {
   const p = a.g.position, dir = p.clone().sub(player.pos).setY(0).normalize();
+  if (a.hp > 50) { a.flee = 3; a.yaw = Math.atan2(dir.x, dir.z); a.vel.set(dir.x * 3, 3, dir.z * 3); return toast(a.name ? a.name + ': Ahia! Perché?' : '✨ Gli unicorni non si toccano ✨'); }
   a.hp -= [1, 4, 5, 6, 7][SWORDS.indexOf(heldId()) + 1];
   a.hurt = 0.3;
   a.flee = 4;
@@ -1398,7 +1542,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${mode === 'creative' ? ' · creativa' : ''}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${mode === 'creative' ? ' · creativa' : ''}${need}`;
 }
 
 function spawn() {
@@ -1434,6 +1578,8 @@ function loop(t) {
   updateBits(dt);
   updateDrops(dt);
   updateAnimals(dt);
+  updateCars(dt);
+  if (dt) updateFlyers(dt, Math.sin(time / DAY * Math.PI * 2) > 0);
   drawHearts();
   camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
   camera.updateProjectionMatrix();
