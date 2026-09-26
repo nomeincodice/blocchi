@@ -139,7 +139,10 @@ const CLAY = 86, TERRACOTTA = 87, ICE = 88, SMOOTH = 89, CACTUS = 90;
 const BIRCH_LOG = 91, BIRCH_LEAVES = 92, BIRCH_PLANKS = 93, SPRUCE_LOG = 94, SPRUCE_LEAVES = 95, SPRUCE_PLANKS = 96, JUNGLE_LOG = 97, JUNGLE_LEAVES = 98, JUNGLE_PLANKS = 99;
 const GOLD = 100, DIAMOND = 101, REDSTONE = 102, LAPIS = 103, EMERALD = 104, COPPER = 105, DPICK = 106, DAXE = 107, DSHOVEL = 108;
 const WOOL = 109, BED = 110, PORK = 111, PORK_C = 112, BEEF = 113, BEEF_C = 114, CHICKEN = 115, CHICKEN_C = 116, MUTTON = 117, MUTTON_C = 118, LEATHER = 119, FEATHER = 120;
-const TALLGRASS = 125, POPPY = 126, DANDELION = 127, DEADBUSH = 128, PLANTS = [125, 126, 127, 128];
+const PINK = 129, LILAC = 130, MINT = 131, SKYBLUE = 132, LEMON = 133, PEACH = 134, PASTELS = [129, 130, 131, 132, 133, 134], ROAD = 135, ROAD_LINE = 136;
+const TALLGRASS = 125, POPPY = 126, DANDELION = 127, DEADBUSH = 128, TULIP = 137, CORNFLOWER = 138, ALLIUM = 139;
+const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 142];
+const PLANTS = [125, 126, 127, 128, 137, 138, 139], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
 const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4;
 const BLOCKS = {
@@ -219,6 +222,13 @@ const RECIPES = [
   [{ [BEEF]: 1, [COAL]: 1 }, BEEF_C, 1],
   [{ [CHICKEN]: 1, [COAL]: 1 }, CHICKEN_C, 1],
   [{ [MUTTON]: 1, [COAL]: 1 }, MUTTON_C, 1],
+  [{ [IRON]: 3 }, BUCKET, 1],
+  [{ [WOOL]: 1, [TULIP]: 1 }, PINK, 1],
+  [{ [WOOL]: 1, [ALLIUM]: 1 }, LILAC, 1],
+  [{ [WOOL]: 1, [LEAVES]: 1 }, MINT, 1],
+  [{ [WOOL]: 1, [CORNFLOWER]: 1 }, SKYBLUE, 1],
+  [{ [WOOL]: 1, [DANDELION]: 1 }, LEMON, 1],
+  [{ [WOOL]: 1, [POPPY]: 1 }, PEACH, 1],
 ];
 for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_BLOCK], [REDSTONE, REDSTONE_BLOCK], [LAPIS, LAPIS_BLOCK], [EMERALD, EMERALD_BLOCK], [COPPER, COPPER_BLOCK], [COAL, COAL_BLOCK]])
   RECIPES.push([{ [m]: 9 }, b, 1], [{ [b]: 1 }, m, 9]);
@@ -364,6 +374,18 @@ add(TALLGRASS, 'Erba alta', same((x, y) => (x % 3 === 1 || x % 4 === 0) && y > 2
 add(POPPY, 'Papavero', same((x, y) => Math.hypot(x - 7.5, y - 5) < 3 ? jit(Math.hypot(x - 7.5, y - 5) < 1 ? [40, 30, 20] : [210, 30, 30], 0.08) : (x === 7 || x === 8) && y > 7 ? jit([60, 120, 40]) : NONE), [0]);
 add(DANDELION, 'Tarassaco', same((x, y) => Math.hypot(x - 7.5, y - 7) < 2.3 ? jit([250, 220, 40], 0.08) : (x === 7 || x === 8) && y > 8 ? jit([60, 120, 40]) : NONE), [0]);
 add(DEADBUSH, 'Arbusto secco', same((x, y) => y > 4 && (Math.abs(x - 7.5 - (y - 15) * 0.4) < 0.7 || Math.abs(x - 7.5 + (y - 15) * 0.4) < 0.7 || x === 7 && y > 8) ? jit([120, 85, 45]) : NONE), [0], AIR);
+const FLOWER = (c, r = 3) => same((x, y) => Math.hypot(x - 7.5, y - 5) < r ? jit(c, 0.08) : (x === 7 || x === 8) && y > 7 ? jit([60, 120, 40]) : NONE);
+add(TULIP, 'Tulipano', FLOWER([240, 120, 180], 2.6), [0]);
+add(CORNFLOWER, 'Fiordaliso', FLOWER([90, 130, 240]), [0]);
+add(ALLIUM, 'Allium', FLOWER([190, 110, 230], 3.4), [0]);
+[['Lana rosa', [255, 182, 210]], ['Lana lilla', [205, 180, 255]], ['Lana menta', [175, 240, 210]], ['Lana azzurra', [170, 215, 255]], ['Lana limone', [255, 240, 160]], ['Lana pesca', [255, 205, 170]]]
+  .forEach(([n, c], i) => add(PASTELS[i], n, same((x, y) => jit(dim(c, (x * 3 + y * 5) % 7 ? 1 : 0.92), 0.03)), [0.8]));
+add(ROAD, 'Strada', same(() => jit([95, 90, 110], 0.06)), [1.5, 'pick']);
+add(ROAD_LINE, 'Strada con striscia', same((x, y) => x > 5 && x < 10 && y > 3 && y < 12 ? [240, 240, 240] : jit([95, 90, 110], 0.06)), [1.5, 'pick']);
+const PAIL = fill => (x, y) => y < 4 || y > 13 || x < 3 + (y - 4 >> 2) || x > 12 - (y - 4 >> 2) ? NONE : fill && y > 4 && y < 8 && x > 3 && x < 12 ? jit(fill, 0.08) : jit(dim(C.iron, y === 4 ? 0.7 : 1), 0.05);
+item(BUCKET, 'Secchio', PAIL());
+item(WATER_BUCKET, "Secchio d'acqua", PAIL([60, 110, 220]));
+item(LAVA_BUCKET, 'Secchio di lava', PAIL([240, 110, 30]));
 DROP[TALLGRASS] = DROP[DEADBUSH] = AIR;
 const IDS = NAMES.map((_, id) => id);
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
@@ -451,7 +473,7 @@ function decorate(d, x, z, wx, wz, h, top, b) {
   if (b === DESERT && top === SAND && h >= 22 && r > 0.99) d[at(x, h + 1, z)] = DEADBUSH;
   if (top !== GRASS) return;
   const g = hash(wx + 11, wz - 5);
-  if (g < [0.12, 0.1, 0, 0.3, 0.05][b]) d[at(x, h + 1, z)] = g < 0.012 ? POPPY : g < 0.024 ? DANDELION : TALLGRASS;
+  if (g < [0.12, 0.1, 0, 0.3, 0.05][b]) d[at(x, h + 1, z)] = g < 0.04 ? FLOWERS[(g * 1e4 | 0) % 5] : TALLGRASS;
   if (r > 0.998) return void (d[at(x, h + 1, z)] = b === JUNGLE ? MELON : PUMPKIN);
   if (r >= TREES[b] || x < 3 || x > 12 || z < 3 || z > 12) return;
   if (b === TAIGA) spruce(d, x, h + 1, z, 6 + (k * 4 | 0));
@@ -460,21 +482,60 @@ function decorate(d, x, z, wx, wz, h, top, b) {
   else tree(d, x, h + 1, z, LOG, LEAVES, 4 + (k * 3 | 0));
 }
 
+const CITY = 256, cities = new Map();
+function cityAt(x, z) {
+  const gx = Math.floor(x / CITY), gz = Math.floor(z / CITY), key = gx + ',' + gz;
+  if (!cities.has(key)) {
+    const cx = gx * CITY + 128, cz = gz * CITY + 128, h = height(cx, cz);
+    cities.set(key, hash(gx * 3 + 17, gz * 5 - 11) < 0.6 && h > SEA + 1 && h < 48 ? { cx, cz, h } : null);
+  }
+  const c = cities.get(key);
+  return c && Math.hypot(x - c.cx, z - c.cz) < 64 ? c : null;
+}
+
+function ground(x, z) {
+  const h = height(x, z), c = cityAt(x, z);
+  return c ? Math.round(h + (c.h - h) * (1 - THREE.MathUtils.smoothstep(Math.hypot(x - c.cx, z - c.cz), 48, 64))) : h;
+}
+
+function house(d, cx, cz, h) {
+  const k = hash(cx * 7, cz * 13), w = 6 + (k * 3 | 0), dep = 6 + (hash(cx, cz * 3) * 3 | 0), x0 = 4 + (11 - w >> 1), z0 = 5, door = x0 + (w >> 1);
+  const wall = PASTELS[k * 6 | 0], roof = PASTELS[(k * 37 | 0) % 6];
+  for (let x = x0; x < x0 + w; x++) for (let z = z0; z < z0 + dep; z++) {
+    const ex = x === x0 || x === x0 + w - 1, ez = z === z0 || z === z0 + dep - 1;
+    d[at(x, h, z)] = PLANKS;
+    for (let y = h + 1; y <= h + 4; y++) d[at(x, y, z)] = !ex && !ez ? AIR : y === h + 2 && ex !== ez && (x + z) % 2 === 0 ? GLASS : wall;
+  }
+  for (let i = 0, y = h + 5; x0 - 1 + i < x0 + w - i && z0 - 1 + i < z0 + dep - i; i++, y++)
+    for (let x = x0 - 1 + i; x <= x0 + w - i; x++) for (let z = z0 - 1 + i; z <= z0 + dep - i; z++) d[at(x, y, z)] = roof;
+  d[at(door, h + 1, z0)] = 40;
+  d[at(door, h + 2, z0)] = 48;
+  for (let z = 3; z < z0; z++) d[at(door, h, z)] = ROAD;
+  d[at(x0 + (w >> 1), h + 4, z0 + (dep >> 1))] = LAMP;
+  d[at(x0 + 1, h + 1, z0 + dep - 2)] = BED;
+  d[at(x0 + w - 2, h + 1, z0 + dep - 2)] = CHEST;
+  for (let y = h + 1; y <= h + 3; y++) d[at(3, y, 3)] = STONEBRICK;
+  d[at(3, h + 4, 3)] = LAMP;
+}
+
 function carve(d, x, z, wx, wz, h) {
   for (let y = 1; y < h - 2; y++) if (cave(wx, y, wz)) d[at(x, y, z)] = y <= 5 ? LAVA : d[at(x, y - 1, z)] && hash(wx * 13 + y, wz * 7) < 0.001 ? CHEST : AIR;
 }
 
 function generate(cx, cz) {
   const d = new Uint8Array(CS * CS * H), heights = new Int16Array(18 * 18);
-  for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = height(cx * CS + x, cz * CS + z);
+  for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = ground(cx * CS + x, cz * CS + z);
+  const city = cityAt(cx * CS + 8, cz * CS + 8), built = city && Math.hypot(cx * CS + 8 - city.cx, cz * CS + 8 - city.cz) < 44;
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
     const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18], b = biome(wx, wz), top = surface(h, b, wx, wz);
     const under = top === GRASS || top === SNOW ? DIRT : top === SAND && b === DESERT && h >= 22 ? SANDSTONE : top;
     for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
     carve(d, x, z, wx, wz, h);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
-    decorate(d, x, z, wx, wz, h, top, b);
+    if (built) d[at(x, h, z)] = x < 3 || z < 3 ? (x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD) : GRASS;
+    else decorate(d, x, z, wx, wz, h, top, b);
   }
+  if (built) house(d, cx * CS, cz * CS, city.h);
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) d[i] = id;
   return [d, heights];
 }
@@ -691,7 +752,13 @@ const clouds = new THREE.Mesh(new THREE.PlaneGeometry(1536, 1536), new THREE.Mes
 clouds.rotation.x = -Math.PI / 2;
 const stars = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(Array.from({ length: 900 }, () => new THREE.Vector3(rnd() * 2 - 1, rnd(), rnd() * 2 - 1).normalize().multiplyScalar(450).toArray()).flat(), 3)),
   new THREE.PointsMaterial({ color: '#fff', size: 2, sizeAttenuation: false, transparent: true, fog: false }));
-scene.add(outline, crack, sun, moon, ambient, camera, clouds, stars, ...lamps);
+const rainbow = new THREE.Group();
+['#ff6b6b', '#ffa94d', '#ffe066', '#8ce99a', '#74c0fc', '#9775fa', '#e599f7'].forEach((color, i) =>
+  rainbow.add(new THREE.Mesh(new THREE.TorusGeometry(260 - i * 9, 4.5, 6, 64, Math.PI), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, fog: false, depthWrite: false }))));
+const flies = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(180), 3)),
+  new THREE.PointsMaterial({ color: '#d9ff7a', size: 5, sizeAttenuation: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+flies.frustumCulled = false;
+scene.add(outline, crack, sun, moon, ambient, camera, clouds, stars, rainbow, flies, ...lamps);
 const HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
@@ -721,7 +788,7 @@ const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: fal
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), slots = saved?.slots ?? Array(36).fill(null);
 const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
-const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
+const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
 const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
@@ -824,14 +891,14 @@ function look(dx, dy, k) {
   player.pitch = THREE.MathUtils.clamp(player.pitch - dy * k, -1.55, 1.55);
 }
 
-function raycast() {
+function raycast(fluids = false) {
   const o = camera.position.toArray(), d = camera.getWorldDirection(new THREE.Vector3()).toArray();
   const b = o.map(Math.floor), s = d.map(Math.sign), delta = d.map(v => Math.abs(1 / v));
   const tMax = o.map((v, i) => (s[i] > 0 ? b[i] + 1 - v : v - b[i]) * delta[i]);
   let prev = null;
   for (let t = 0; t <= REACH;) {
     const id = get(...b);
-    if (id && !FLUID.includes(id)) return { hit: b, prev };
+    if (id && (fluids ? id === WATER || id === LAVA : !FLUID.includes(id))) return { hit: b, prev };
     prev = [...b];
     const i = tMax.indexOf(Math.min(...tMax));
     b[i] += s[i]; t = tMax[i]; tMax[i] += delta[i];
@@ -903,6 +970,7 @@ function place() {
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
   if (FOOD[id]) return eat(id);
+  if (BUCKETS.includes(id)) return pour(id, r);
   if (!r?.prev || !id || !BLOCKS[id] && id !== DOOR) return;
   const [x, y, z] = r.prev, [dx, dy, dz] = r.prev.map((v, i) => v - r.hit[i]);
   const inside = y => x + 1 > p.x - 0.3 && x < p.x + 0.3 && y + 1 > p.y && y < p.y + 1.8 && z + 1 > p.z - 0.3 && z < p.z + 0.3;
@@ -915,6 +983,18 @@ function place() {
   set(x, y, z, put);
   if (id === DOOR) set(x, y + 1, z, put + 8);
   if (id === CHEST) { chests[[x, y, z].join()] = {}; saveChests(); }
+  drawInv();
+}
+
+function pour(id, r) {
+  const f = id === BUCKET && raycast(true), [x, y, z] = f ? f.hit : r?.prev ?? [];
+  if (id === BUCKET && !f || id !== BUCKET && (!r?.prev || solid(get(x, y, z)))) return;
+  const full = f && (get(x, y, z) === WATER ? WATER_BUCKET : LAVA_BUCKET);
+  set(x, y, z, id === BUCKET ? AIR : id === WATER_BUCKET ? WATER : LAVA);
+  wake(x, y, z);
+  if (!is('infinite')) slots[sel] = { id: full || BUCKET, n: 1 };
+  sound(id === BUCKET ? 500 : 350, 0.3, 0.25);
+  swing ||= 0.01;
   drawInv();
 }
 
@@ -1287,6 +1367,24 @@ function sky(dt) {
   clouds.material.color.setScalar(0.04 + 0.96 * light * light);
   stars.position.copy(c);
   stars.material.opacity = 1 - light;
+  rainbow.position.set(c.x, c.y - 90, c.z - 520);
+  rainbow.visible = light > 0.6 && !wet;
+  flies.visible = light < 0.5;
+  if (flies.visible) updateFlies(dt);
+}
+
+function updateFlies(dt) {
+  const pos = flies.geometry.attributes.position, p = player.pos;
+  for (let i = 0; i < 60; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (Math.hypot(x - p.x, z - p.z) > 24) {
+      x = p.x + rnd() * 40 - 20; z = p.z + rnd() * 40 - 20; y = Math.floor(p.y) + 8;
+      while (y > 0 && !solid(get(Math.floor(x), y, Math.floor(z)))) y--;
+      y += 1.5 + rnd() * 2.5;
+    }
+    pos.setXYZ(i, x + Math.sin(clock * 1.3 + i) * dt, y + Math.sin(clock * 2 + i * 1.7) * dt * 0.5, z + Math.cos(clock * 1.1 + i * 0.7) * dt);
+  }
+  pos.needsUpdate = true;
 }
 
 function lightTorches() {
