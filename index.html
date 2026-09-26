@@ -39,7 +39,7 @@
   .gui { padding: 16px; justify-items: center; max-height: 88vh; overflow: auto; color: var(--ink); background: var(--gui); border: 3px solid var(--edge); box-shadow: inset 3px 3px var(--gui-hi), inset -3px -3px var(--gui-lo); }
   .gui h2 { margin: 0 auto; }
   .head { justify-self: stretch; }
-  .gui .close { padding: 4px 12px; color: var(--ink); background: var(--gui); border-color: var(--edge); }
+  .gui .close, .gui .mini { padding: 4px 12px; color: var(--ink); background: var(--gui); border-color: var(--edge); }
   .gui { --s: 32px; }
   .gui input { width: 22px; height: 22px; }
   .grid9 { width: min(calc(9 * (var(--s) + 10px)), 86vw); }
@@ -114,6 +114,10 @@
     <label class="row"><input type="checkbox" class="god"> Invincibile</label>
     <label class="row"><input type="checkbox" class="infinite"> Roba infinita: prendi tutto dall'inventario, niente si consuma</label>
   </div>
+</div>
+<div class="panel stack shop" style="display: none">
+  <div class="gui stack"><div class="row head"><h2 class="shop-title">Negozio</h2><button class="btn close">✕</button></div><p class="purse"></p>
+    <h3>Compra</h3><div class="stack cols buy"></div><h3>Vendi</h3><div class="stack cols sell"></div></div>
 </div>
 <div class="panel stack dead" style="display: none"><h1>Sei morto!</h1><p>Tieni tutto l'inventario</p><button class="btn close">Rinasci</button></div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
@@ -487,7 +491,7 @@ function cityAt(x, z) {
   const gx = Math.floor(x / CITY), gz = Math.floor(z / CITY), key = gx + ',' + gz;
   if (!cities.has(key)) {
     const cx = gx * CITY + 128, cz = gz * CITY + 128, h = height(cx, cz);
-    cities.set(key, hash(gx * 3 + 17, gz * 5 - 11) < 0.6 && h > SEA + 1 && h < 48 ? { cx, cz, h } : null);
+    cities.set(key, hash(gx * 3 + 17, gz * 5 - 11) < 0.6 && h > SEA + 1 && h < 48 ? { cx, cz, h, ruin: hash(gx + 5, gz * 7) < 0.25 } : null);
   }
   const c = cities.get(key);
   return c && Math.hypot(x - c.cx, z - c.cz) < 64 ? c : null;
@@ -498,24 +502,100 @@ function ground(x, z) {
   return c ? Math.round(h + (c.h - h) * (1 - THREE.MathUtils.smoothstep(Math.hypot(x - c.cx, z - c.cz), 48, 64))) : h;
 }
 
-function house(d, cx, cz, h) {
-  const k = hash(cx * 7, cz * 13), w = 6 + (k * 3 | 0), dep = 6 + (hash(cx, cz * 3) * 3 | 0), x0 = 4 + (11 - w >> 1), z0 = 5, door = x0 + (w >> 1);
-  const wall = PASTELS[k * 6 | 0], roof = PASTELS[(k * 37 | 0) % 6];
-  for (let x = x0; x < x0 + w; x++) for (let z = z0; z < z0 + dep; z++) {
-    const ex = x === x0 || x === x0 + w - 1, ez = z === z0 || z === z0 + dep - 1;
-    d[at(x, h, z)] = PLANKS;
-    for (let y = h + 1; y <= h + 4; y++) d[at(x, y, z)] = !ex && !ez ? AIR : y === h + 2 && ex !== ez && (x + z) % 2 === 0 ? GLASS : wall;
+function fill(d, x0, y0, z0, x1, y1, z1, fn) {
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) {
+    const id = fn(x, y, z);
+    if (id !== undefined) d[at(x, y, z)] = id;
   }
-  for (let i = 0, y = h + 5; x0 - 1 + i < x0 + w - i && z0 - 1 + i < z0 + dep - i; i++, y++)
-    for (let x = x0 - 1 + i; x <= x0 + w - i; x++) for (let z = z0 - 1 + i; z <= z0 + dep - i; z++) d[at(x, y, z)] = roof;
-  d[at(door, h + 1, z0)] = 40;
-  d[at(door, h + 2, z0)] = 48;
+}
+
+function roof(d, x0, z0, x1, z1, y, id, gable) {
+  for (let i = 0; id && x0 + (gable ? 0 : i) <= x1 - (gable ? 0 : i) && z0 + i <= z1 - i; i++, y++) fill(d, x0 + (gable ? 0 : i), y, z0 + i, x1 - (gable ? 0 : i), y, z1 - i, () => id);
+}
+
+function role(cx, cz, city) {
+  const r = hash(cx * 7 + 3, cz * 11 - 5);
+  if (cx * CS === city.cx && cz * CS === city.cz) return plaza;
+  return city.ruin ? (r < 0.3 ? park : house) : r < 0.14 ? shop : r < 0.24 ? statue : r < 0.34 ? park : r < 0.5 ? tower : house;
+}
+
+function house(d, cx, cz, city) {
+  const h = city.h, k = n => hash(cx * 7 + n, cz * 13 - n), ruin = city.ruin, w = 6 + (k(1) * 5 | 0), dep = 6 + (k(2) * 4 | 0), tall = k(3) < 0.35 ? 8 : 4;
+  const x0 = 4 + (11 - w >> 1), z0 = 5, x1 = x0 + w - 1, z1 = z0 + dep - 1, door = x0 + (w >> 1);
+  const low = ruin ? MOSSY : PASTELS[k(4) * 6 | 0], high = ruin ? COBBLE : PASTELS[k(5) * 6 | 0], trim = ruin ? LOG : k(6) < 0.5 ? WOOL : BIRCH_PLANKS;
+  fill(d, x0, h, z0, x1, h + tall, z1, (x, y, z) => {
+    const ex = x === x0 || x === x1, ez = z === z0 || z === z1;
+    if (y === h) return PLANKS;
+    if (!ex && !ez || ruin && hash(x * 31 + y, z * 17 + cx) < 0.25) return AIR;
+    if (ex && ez) return trim;
+    if ((y - h) % 4 === 2 && (x + z) % 2 === 0) return ruin ? AIR : GLASS;
+    return y - h > 4 ? high : low;
+  });
+  roof(d, x0 - 1, z0 - 1, x1 + 1, z1 + 1, h + tall + 1, ruin && k(7) < 0.5 ? 0 : ruin ? COBBLE : PASTELS[k(8) * 6 | 0], k(9) < 0.5);
+  d[at(door, h + 1, z0)] = ruin ? AIR : 40;
+  d[at(door, h + 2, z0)] = ruin ? AIR : 48;
   for (let z = 3; z < z0; z++) d[at(door, h, z)] = ROAD;
-  d[at(x0 + (w >> 1), h + 4, z0 + (dep >> 1))] = LAMP;
-  d[at(x0 + 1, h + 1, z0 + dep - 2)] = BED;
-  d[at(x0 + w - 2, h + 1, z0 + dep - 2)] = CHEST;
-  for (let y = h + 1; y <= h + 3; y++) d[at(3, y, 3)] = STONEBRICK;
-  d[at(3, h + 4, 3)] = LAMP;
+  for (let x = x0; x <= x1; x += 2) if (x !== door && !ruin) d[at(x, h + 1, 4)] = FLOWERS[(k(x) * 5) | 0];
+  d[at(x1 - 1, h + 1, z1 - 1)] = CHEST;
+  d[at(x0 + 1, h + 1, z0 + 1)] = ruin ? JUNGLE_LEAVES : BOOKSHELF;
+  if (ruin) return;
+  d[at(x0 + 1, h + 1, z1 - 1)] = BED;
+  d[at(x1 - 1, h + 1, z0 + 1)] = TABLE;
+  d[at(x0 + (w >> 1), h + tall, z0 + (dep >> 1))] = LAMP;
+}
+
+function tower(d, cx, cz, city) {
+  const h = city.h, k = hash(cx * 5, cz * 9), wall = PASTELS[k * 6 | 0], top = PASTELS[(k * 17 | 0) % 6];
+  fill(d, 6, h, 6, 10, h + 12, 10, (x, y, z) => {
+    if (y === h) return PLANKS;
+    if (x > 6 && x < 10 && z > 6 && z < 10) return AIR;
+    return (y - h) % 3 === 2 && (x === 8 || z === 8) ? GLASS : wall;
+  });
+  roof(d, 5, 5, 11, 11, h + 13, top);
+  d[at(8, h + 1, 6)] = 40;
+  d[at(8, h + 2, 6)] = 48;
+  d[at(8, h + 12, 8)] = LAMP;
+  for (let z = 3; z < 6; z++) d[at(8, h, z)] = ROAD;
+  for (const [x, z] of [[5, 5], [11, 5], [5, 11], [11, 11]]) d[at(x, h + 1, z)] = FLOWERS[(k * 50 + x + z) % 5 | 0];
+}
+
+function shop(d, cx, cz, city) {
+  const h = city.h, wall = PASTELS[hash(cx, cz * 3) * 6 | 0];
+  fill(d, 4, h, 5, 13, h + 4, 12, (x, y, z) => y === h ? SMOOTH : x === 4 || x === 13 || z === 12 || z === 5 && (x < 6 || x > 11) ? wall : AIR);
+  fill(d, 3, h + 5, 4, 14, h + 5, 13, x => x % 2 ? PINK : WOOL);
+  fill(d, 6, h + 1, 8, 11, h + 1, 8, () => PLANKS);
+  fill(d, 5, h + 1, 11, 12, h + 2, 11, (x, y) => y > h + 1 ? BOOKSHELF : [PUMPKIN, MELON, CHEST, BOOKSHELF][x % 4]);
+  d[at(8, h + 4, 9)] = LAMP;
+  for (let z = 3; z < 5; z++) for (const x of [8, 9]) d[at(x, h, z)] = ROAD;
+}
+
+function plaza(d, cx, cz, city) {
+  const h = city.h, ruin = city.ruin;
+  fill(d, 3, h, 3, 15, h, 15, (x, y, z) => ruin ? (hash(x, z + cx) < 0.4 ? GRAVEL : MOSSY) : (x + z) % 2 ? SMOOTH : STONEBRICK);
+  fill(d, 6, h + 1, 6, 12, h + 1, 12, (x, y, z) => x === 6 || x === 12 || z === 6 || z === 12 ? STONEBRICK : ruin ? AIR : WATER);
+  fill(d, 9, h + 1, 9, 9, h + 3, 9, () => ruin ? MOSSY : DIORITE);
+  d[at(9, h + 4, 9)] = ruin ? AIR : GLOWSTONE;
+  for (let i = 4; i <= 14; i += 2) for (const [x, z] of [[i, 4], [i, 14], [4, i], [14, i]]) d[at(x, h + 1, z)] = ruin ? TALLGRASS : FLOWERS[i % 5];
+}
+
+function statue(d, cx, cz, city) {
+  const h = city.h, mat = hash(cx, cz) < 0.5 ? GOLD_BLOCK : DIORITE;
+  fill(d, 6, h + 1, 6, 10, h + 1, 10, () => STONEBRICK);
+  fill(d, 7, h + 2, 7, 9, h + 2, 9, () => SMOOTH);
+  for (const x of [7, 9]) fill(d, x, h + 3, 8, x, h + 4, 8, () => mat);
+  fill(d, 7, h + 5, 8, 9, h + 7, 8, () => mat);
+  fill(d, 8, h + 8, 8, 8, h + 9, 8, () => mat);
+  d[at(6, h + 7, 8)] = mat;
+  fill(d, 10, h + 7, 8, 10, h + 9, 8, () => mat);
+  for (let i = 5; i <= 11; i += 2) for (const [x, z] of [[i, 5], [i, 11]]) d[at(x, h + 1, z)] = FLOWERS[i % 5];
+}
+
+function park(d, cx, cz, city) {
+  const h = city.h;
+  fill(d, 3, h + 1, 3, 15, h + 1, 15, (x, y, z) => hash(x + cx, z + cz) < 0.25 ? (city.ruin ? TALLGRASS : FLOWERS[(x + z) % 5]) : undefined);
+  tree(d, 9, h + 1, 9, city.ruin ? LOG : BIRCH_LOG, city.ruin ? LEAVES : BIRCH_LEAVES, 6);
+  fill(d, 5, h + 1, 5, 5, h + 1, 7, () => PLANKS);
+  fill(d, 13, h + 1, 11, 13, h + 1, 13, () => PLANKS);
 }
 
 function carve(d, x, z, wx, wz, h) {
@@ -532,10 +612,14 @@ function generate(cx, cz) {
     for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
     carve(d, x, z, wx, wz, h);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
-    if (built) d[at(x, h, z)] = x < 3 || z < 3 ? (x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD) : GRASS;
+    if (built) d[at(x, h, z)] = x > 2 && z > 2 ? GRASS : city.ruin && hash(wx, wz) < 0.3 ? GRAVEL : x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD;
     else decorate(d, x, z, wx, wz, h, top, b);
   }
-  if (built) house(d, cx * CS, cz * CS, city.h);
+  if (built) {
+    role(cx, cz, city)(d, cx * CS, cz * CS, city);
+    fill(d, 3, city.h + 1, 3, 3, city.h + 3, 3, () => STONEBRICK);
+    if (!city.ruin) d[at(3, city.h + 4, 3)] = LAMP;
+  }
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) d[i] = id;
   return [d, heights];
 }
@@ -793,7 +877,7 @@ const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}');
 let chestAt = '';
-let bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
+let coins = saved?.coins ?? 0, shopper = null, bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
@@ -990,6 +1074,7 @@ function updateBits(dt) {
 
 function place() {
   const r = raycast(), p = player.pos, id = heldId(), t = aimAnimal(r);
+  if (t?.shop) return openShop(t);
   if (t?.type === 'person') return toast(`${t.name}: ${choice(PHRASES)}`);
   if (t?.type === 'unicorn') { player.riding = t; return toast('In sella! Spazio per volare, Shift per scendere'); }
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
@@ -1140,10 +1225,18 @@ function makeAnimal(type, x, y, z) {
 const SHIRTS = ['#ff8fab', '#8fc9ff', '#8ff0a4', '#c49bff', '#ffc46b', '#fff36b'], PANTS = ['#3b5bdb', '#495057', '#7950f2', '#2b8a3e'];
 const SKINS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524'], HAIR = ['#3b2314', '#e6be8a', '#1c1c1c', '#b55239', '#f5f5f5'];
 const PEOPLE = ['Anna', 'Luca', 'Sofia', 'Marco', 'Giulia', 'Leo', 'Emma', 'Tommaso', 'Aurora', 'Pietro'];
+const PRICE = {
+  [DIRT]: 1, [COBBLE]: 1, [STONE]: 1, [SAND]: 1, [LOG]: 2, [BIRCH_LOG]: 2, [SPRUCE_LOG]: 2, [JUNGLE_LOG]: 2, [COAL]: 3, [IRON_ORE]: 5, [IRON]: 8,
+  [GOLD_ORE]: 8, [GOLD]: 12, [COPPER]: 5, [DIAMOND]: 40, [EMERALD]: 30, [REDSTONE]: 4, [LAPIS]: 4, [WOOL]: 3, [PORK]: 2, [BEEF]: 2, [CHICKEN]: 2,
+  [MUTTON]: 2, [PORK_C]: 4, [BEEF_C]: 5, [CHICKEN_C]: 4, [MUTTON_C]: 4, [LEATHER]: 3, [PUMPKIN]: 3, [MELON]: 3, [GLASS]: 2, [BED]: 12, [BUCKET]: 25,
+  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1,
+};
+const STOCK = [TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
+const value = id => PRICE[id] ?? 1;
 const PHRASES = ['Ciao!', 'Che bella giornata!', 'Hai visto gli unicorni? Si possono cavalcare!', 'Attento alle macchine!', 'Ti piace la nostra città?',
   'Di notte escono le lucciole ✨', 'Sto andando a fare la spesa', 'Adoro i fiori lilla', 'Hai già un letto? Di notte si dorme!', 'Nelle grotte ci sono bauli pieni di tesori'];
 
-function makePerson(x, y, z, city) {
+function makePerson(x, y, z, city, shop) {
   const g = new THREE.Group(), [shirt, pants, skin, hair] = [SHIRTS, PANTS, SKINS, HAIR].map(a => lambert(choice(a)));
   const limb = (w, h, mat, x, top) => { const l = part(g, w, h, w, mat); l.geometry.translate(0, -h / 2, 0); l.position.set(x, top, 0); return l; };
   part(g, 0.5, 0.7, 0.28, shirt).position.y = 1.1;
@@ -1152,12 +1245,17 @@ function makePerson(x, y, z, city) {
   const legs = [limb(0.22, 0.75, pants, -0.12, 0.75), limb(0.22, 0.75, pants, 0.12, 0.75)], arms = [limb(0.18, 0.68, shirt, -0.35, 1.44), limb(0.18, 0.68, shirt, 0.35, 1.44)];
   g.position.set(x, y, z);
   scene.add(g);
-  animals.push({ type: 'person', name: choice(PEOPLE), city, g, legs, arms, act: '', mats: [shirt, pants, skin, hair], vel: new THREE.Vector3(), yaw: rnd() * 6.28, hp: 99, timer: 0, walk: false, flee: 0, hurt: 0, ground: false });
+  animals.push({ type: 'person', name: choice(PEOPLE), city, shop, g, legs, arms, act: '', mats: [shirt, pants, skin, hair], vel: new THREE.Vector3(), yaw: rnd() * 6.28, hp: 99, timer: 0, walk: false, flee: 0, hurt: 0, ground: false });
 }
 
 function spawnPerson() {
   const city = cityAt(player.pos.x, player.pos.z);
-  if (!city || animals.filter(a => a.type === 'person').length >= 8) return;
+  if (!city || city.ruin) return;
+  for (let i = -3; i <= 2; i++) for (let j = -3; j <= 2; j++) {
+    const cx = city.cx / CS + i, cz = city.cz / CS + j, key = cx + ',' + cz, x = cx * CS + 8.5, z = cz * CS + 9.5;
+    if (Math.hypot(x - city.cx, z - city.cz) < 46 && role(cx, cz, city) === shop && Math.hypot(x - player.pos.x, z - player.pos.z) < 48 && !animals.some(a => a.shop === key)) makePerson(x, city.h + 1, z, city, key);
+  }
+  if (animals.filter(a => a.type === 'person').length >= 8) return;
   makePerson(city.cx + ((rnd() * 5 | 0) - 2) * 16 + 1.5, city.h + 1, city.cz + rnd() * 64 - 32, city);
 }
 
@@ -1211,6 +1309,7 @@ function updateAnimals(dt) {
       a.timer = 2 + rnd() * 4; a.walk = rnd() < 0.6; a.yaw = rnd() * 6.28; a.act = a.walk ? '' : choice(['wave', 'dance', '', '']);
       if (a.city && Math.hypot(a.g.position.x - a.city.cx, a.g.position.z - a.city.cz) > 40) { a.walk = true; a.yaw = Math.atan2(a.city.cx - a.g.position.x, a.city.cz - a.g.position.z); }
     }
+    if (a.shop) { a.walk = false; a.yaw = Math.PI; if (a.act === 'dance') a.act = ''; }
     if (a.type === 'unicorn' && rnd() < dt * 5) sparkle(a.g.position);
     if (a.flee > 0) a.walk = true;
     for (const m of a.mats) m.emissive.setRGB(a.hurt > 0 ? 0.6 : 0, 0, 0);
@@ -1230,23 +1329,26 @@ function makeCar(city) {
   for (const x of [-0.55, 0.55]) part(g, 0.3, 0.18, 0.05, light).position.set(x, 0.65, 1.51);
   g.position.set(city.cx + ((rnd() * 5 | 0) - 2) * 16 + 1.5, city.h + 1, city.cz + ((rnd() * 5 | 0) - 2) * 16 + 1.5);
   scene.add(g);
-  cars.push({ g, city, dir: rnd() * 4 | 0, mats });
+  cars.push({ g, city, dir: 0, left: 0, mats });
 }
 
 function drive(c, dt) {
-  const p = c.g.position, [dx, dz] = DIRS[c.dir], a = dx ? 'x' : 'z', before = p[a];
-  p.x += dx * 6 * dt;
-  p.z += dz * 6 * dt;
-  const k0 = Math.floor((before - 1.5) / 16), k1 = Math.floor((p[a] - 1.5) / 16);
-  if (k0 !== k1) {
-    p[a] = Math.max(k0, k1) * 16 + 1.5;
+  const p = c.g.position;
+  if (c.left <= 0) {
+    p.x = Math.round((p.x - 1.5) / 16) * 16 + 1.5;
+    p.z = Math.round((p.z - 1.5) / 16) * 16 + 1.5;
     const ok = d => { const cx = Math.floor((p.x + Math.min(DIRS[d][0], 0) * 16) / 16), cz = Math.floor((p.z + Math.min(DIRS[d][1], 0) * 16) / 16); return Math.hypot(cx * 16 + 8 - c.city.cx, cz * 16 + 8 - c.city.cz) < 44; };
-    const opts = [0, 1, 2, 3].filter(d => d !== (c.dir + 2) % 4 && ok(d));
-    c.dir = opts.length ? choice(opts) : (c.dir + 2) % 4;
+    const opts = [0, 1, 2, 3].filter(ok), ahead = opts.filter(d => d !== (c.dir + 2) % 4);
+    c.dir = choice(ahead.length ? ahead : opts.length ? opts : [c.dir]);
+    c.left = 16;
   }
-  c.g.rotation.y = Math.atan2(DIRS[c.dir][0], DIRS[c.dir][1]);
-  const off = player.pos.clone().sub(p).setY(0);
-  if (off.length() < 1.8 && Math.abs(player.pos.y - p.y) < 2) player.pos.add(off.setLength(0.2));
+  const [dx, dz] = DIRS[c.dir], front = p.clone().add(new THREE.Vector3(dx * 3.5, 0, dz * 3.5));
+  const blocked = cars.some(o => o !== c && o.g.position.distanceTo(front) < 2.5) || player.pos.distanceTo(front) < 2;
+  const step = blocked ? 0 : Math.min(c.left, 6 * dt);
+  p.x += dx * step;
+  p.z += dz * step;
+  c.left -= step;
+  c.g.rotation.y = Math.atan2(dx, dz);
 }
 
 function makeFlyer(kind) {
@@ -1277,7 +1379,7 @@ function updateFlyers(dt, day) {
 
 function updateCars(dt) {
   const city = cityAt(player.pos.x, player.pos.z);
-  if (city && cars.length < 5 && rnd() < dt) makeCar(city);
+  if (city && !city.ruin && cars.length < 5 && rnd() < dt) makeCar(city);
   for (const c of [...cars]) {
     if (dt) drive(c, dt);
     if (c.g.position.distanceTo(player.pos) > 90) { scene.remove(c.g); c.g.traverse(o => o.geometry?.dispose()); c.mats.forEach(m => m.dispose()); cars.splice(cars.indexOf(c), 1); }
@@ -1438,7 +1540,32 @@ function craft(need, out, n) {
   drawCraft();
 }
 
-const MENUS = ['craft', 'chest', 'cheat', 'dead'];
+function openShop(t) {
+  shopper = t;
+  openMenu('shop');
+}
+
+function card(id, n, label, buttons) {
+  const c = document.createElement('div'), row = document.createElement('div');
+  c.className = 'recipe';
+  row.className = 'row';
+  row.append(slot(id, n), NAMES[id]);
+  c.append(row, label, ...buttons.map(([text, fn, off]) => Object.assign(document.createElement('button'), { className: 'btn mini', textContent: text, onclick: fn, disabled: off })));
+  return c;
+}
+
+function drawShop() {
+  const [kx, kz] = shopper.shop.split(',').map(Number), stock = STOCK.filter((_, i) => hash(kx * 13 + i, kz * 7) < 0.45), free = is('infinite');
+  const done = () => { sound(3000, 0.2, 0.08); drawInv(); drawShop(); };
+  const buy = id => { if (!free) coins -= value(id) * 2; const left = give(id, 1); if (left) drop(id, left, player.pos.x, player.pos.y + 1, player.pos.z); done(); };
+  const sell = (id, n) => { take(id, n); coins += value(id) * n; done(); };
+  $('.shop-title').textContent = `Negozio di ${shopper.name}`;
+  $('.purse').textContent = `🪙 ${coins} monete`;
+  $('.buy').replaceChildren(...stock.map(id => card(id, '', `🪙 ${value(id) * 2}`, [['Compra', () => buy(id), !free && coins < value(id) * 2]])));
+  $('.sell').replaceChildren(...IDS.filter(id => count(id) > 0).map(id => card(id, count(id), `🪙 ${value(id)} l'uno`, [['Vendi 1', () => sell(id, 1)], ['Vendi tutto', () => sell(id, count(id))]])));
+}
+
+const MENUS = ['craft', 'chest', 'cheat', 'dead', 'shop'];
 const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
@@ -1464,6 +1591,7 @@ function openMenu(name) {
   if (!name) return start();
   drawInv();
   if (name === 'craft') drawCraft();
+  if (name === 'shop') drawShop();
   if (name === 'chest') drawChest();
   setPlaying(false);
   document.exitPointerLock?.();
@@ -1542,7 +1670,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${mode === 'creative' ? ' · creativa' : ''}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins}${need}`;
 }
 
 function spawn() {
@@ -1638,7 +1766,7 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins }));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
