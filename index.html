@@ -90,6 +90,7 @@
   <h1 class="logo">BLOCCHI</h1><p class="splash">Senza rompimenti!</p>
   <button class="mcbtn play">Gioca</button>
   <button class="mcbtn" data-menu="craft">Inventario e crafting</button>
+  <button class="mcbtn mode">Modalità: Sopravvivenza</button>
   <button class="mcbtn" data-menu="cheat">Trucchi</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
     <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
@@ -99,6 +100,7 @@
 </div>
 <div class="panel stack craft" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Inventario</h2><button class="btn close">✕</button></div>
+    <p>Clicca un oggetto nello zaino per prenderlo in mano · clicca un oggetto nella barra per rimetterlo nello zaino</p>
     <div class="row grid9 store"></div><div class="row grid9 hot"></div><div class="row all"></div>
     <h2>Crafting</h2><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
 </div>
@@ -223,7 +225,7 @@ for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_
 const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !PLANTS.includes(b) && !(isDoor(b) && b - 40 & 4);
 const AO = [0.45, 0.65, 0.82, 1];
 const XRAY = [COAL_ORE, IRON_ORE, GOLD_ORE, DIAMOND_ORE, REDSTONE_ORE, LAPIS_ORE, EMERALD_ORE, COPPER_ORE, CHEST];
-const cheat = { xray: false, instant: false, god: false, infinite: false };
+const cheat = { xray: false, instant: false, god: false, infinite: false }, is = k => cheat[k] || mode === 'creative';
 
 const rnd = Math.random;
 const jit = (c, j = 0.12) => { const k = 1 + (rnd() - 0.5) * 2 * j; return c.map(v => v * k); };
@@ -727,7 +729,7 @@ let chestAt = '';
 let bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
-let flowT = 0, sel = 0, cursor = null, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
+let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -791,12 +793,22 @@ function sound(freq, vol = 0.25, len = 0.15) {
 }
 
 function hurt(n) {
-  if (cheat.god || hp <= 0) return;
+  if (is('god') || hp <= 0) return;
   sound(260, 0.45, 0.2);
   hp -= n;
   hurtAt = clock;
   $('.hurt').animate([{ opacity: 0.45 }, { opacity: 0 }], 400);
   if (hp <= 0) { hp = 0; openMenu('dead'); }
+}
+
+function setMode(m) {
+  mode = m;
+  $('.mode').textContent = 'Modalità: ' + (m === 'creative' ? 'Creativa' : 'Sopravvivenza');
+  $('.hearts').style.display = m === 'creative' ? 'none' : '';
+  if (m === 'creative') hp = 20;
+  else player.fly = false;
+  drawInv();
+  drawCraft();
 }
 
 function drawHearts() {
@@ -843,7 +855,7 @@ function take(id, n) {
   }
 }
 function digTime(id) {
-  if (cheat.instant) return 0.15;
+  if (is('instant')) return 0.15;
   const [t, type, min = 0] = HARD[id], k = tier(type);
   return k < min ? Infinity : t / SPEED[k];
 }
@@ -897,7 +909,7 @@ function place() {
   const put = id === DOOR ? 40 + facing() : id !== TORCH || dy === 1 ? id : dy === -1 ? 0 : dx === 1 ? 35 : dx === -1 ? 36 : dz === 1 ? 37 : 38;
   if (!put || y >= H || id === TORCH && FLUID.includes(get(x, y, z)) || inside(y)) return;
   if (id === DOOR && (y + 1 >= H || solid(get(x, y + 1, z)) || inside(y + 1))) return;
-  if (!cheat.infinite && !--slots[sel].n) slots[sel] = null;
+  if (!is('infinite') && !--slots[sel].n) slots[sel] = null;
   swing ||= 0.01;
   sound(tone(put), 0.3, 0.15);
   set(x, y, z, put);
@@ -917,7 +929,7 @@ function eat(id) {
   if (hp >= 20) return toast('Non hai fame');
   hp = Math.min(20, hp + FOOD[id]);
   sound(1800, 0.25, 0.3);
-  if (!cheat.infinite && !--slots[sel].n) slots[sel] = null;
+  if (!is('infinite') && !--slots[sel].n) slots[sel] = null;
   swing ||= 0.01;
   drawInv();
 }
@@ -940,7 +952,7 @@ function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
   const lava = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === LAVA);
   const out = isDoor(id) ? DOOR : DROP[id] ?? id, above = get(x, y + 1, z);
-  if (out) drop(out, 1, x + 0.5, y + 0.5, z + 0.5);
+  if (out && mode !== 'creative') drop(out, 1, x + 0.5, y + 0.5, z + 0.5);
   if (PLANTS.includes(above) || above === TORCH) { if (DROP[above] ?? above) drop(DROP[above] ?? above, 1, x + 0.5, y + 1.5, z + 0.5); set(x, y + 1, z, AIR, false); }
   sound(tone(id), 0.35, 0.22);
   const other = y + (id - 40 & 8 ? -1 : 1);
@@ -1143,22 +1155,23 @@ function choose(i) {
   drawInv();
 }
 
-function pick(i) {
-  const a = slots[cursor], b = slots[i];
-  if (cursor === null || cursor === i) cursor = cursor === null && b ? i : null;
-  else if (b?.id === a.id && b.n < MAX(b.id)) {
-    const k = Math.min(a.n, MAX(b.id) - b.n);
-    b.n += k;
-    a.n -= k;
-    if (!a.n) slots[cursor] = null;
-    cursor = null;
-  } else { [slots[cursor], slots[i]] = [b, a]; cursor = null; }
+function toStore(i) {
+  const s = slots[i], free = () => slots.indexOf(null, 9);
+  slots[i] = null;
+  for (let j = 9; j < 36 && s.n; j++) if (slots[j]?.id === s.id && slots[j].n < MAX(s.id)) { const k = Math.min(s.n, MAX(s.id) - slots[j].n); slots[j].n += k; s.n -= k; }
+  if (s.n) slots[free() >= 0 ? free() : i] = s;
+}
+
+function quickMove(i) {
+  if (i < 9 && !slots[i]) sel = i;
+  else if (i < 9) toStore(i);
+  else if (slots[i]) [slots[sel], slots[i]] = [slots[i], slots[sel]];
   drawInv();
 }
 
 function slotEl(i, click) {
   const s = slots[i], d = s ? slot(s.id, s.n > 1 ? s.n : '') : Object.assign(document.createElement('div'), { className: 'slot' });
-  d.classList.toggle('on', i === cursor);
+  d.classList.toggle('on', i === sel && click === quickMove);
   d.onclick = () => click(i);
   return d;
 }
@@ -1170,17 +1183,17 @@ function drawInv() {
     d.onclick = () => choose(i);
     return d;
   }));
-  $('.store').replaceChildren(...slots.slice(9).map((_, i) => slotEl(i + 9, pick)));
-  $('.hot').replaceChildren(...slots.slice(0, 9).map((_, i) => slotEl(i, pick)));
-  $('.all').replaceChildren(...(cheat.infinite ? ITEMS : []).map(id => {
+  $('.store').replaceChildren(...slots.slice(9).map((_, i) => slotEl(i + 9, quickMove)));
+  $('.hot').replaceChildren(...slots.slice(0, 9).map((_, i) => slotEl(i, quickMove)));
+  $('.all').replaceChildren(...(is('infinite') ? ITEMS : []).map(id => {
     const d = slot(id, '');
-    d.onclick = () => { give(id, MAX(id)); drawInv(); };
+    d.onclick = () => { slots[sel] = { id, n: MAX(id) }; drawInv(); };
     return d;
   }));
 }
 
 function drawCraft() {
-  const can = ([need]) => cheat.infinite || Object.entries(need).every(([id, k]) => count(+id) >= k);
+  const can = ([need]) => is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k);
   $('.recipes').replaceChildren(...RECIPES.filter(r => !$('.can').checked || can(r)).map(([need, out, n]) => {
     const b = document.createElement('button'), row = document.createElement('div');
     b.className = 'recipe';
@@ -1194,7 +1207,7 @@ function drawCraft() {
 }
 
 function craft(need, out, n) {
-  if (!cheat.infinite) for (const [id, k] of Object.entries(need)) take(+id, k);
+  if (!is('infinite')) for (const [id, k] of Object.entries(need)) take(+id, k);
   const left = give(out, n);
   if (left) drop(out, left, player.pos.x, player.pos.y + 1, player.pos.z);
   drawInv();
@@ -1225,7 +1238,6 @@ function openMenu(name) {
     if (bed && get(...bed) === BED) player.pos.set(bed[0] + 0.5, bed[1] + 1, bed[2] + 0.5); else spawn();
   }
   if (!name) return start();
-  cursor = null;
   drawInv();
   if (name === 'craft') drawCraft();
   if (name === 'chest') drawChest();
@@ -1287,8 +1299,8 @@ function lightTorches() {
 
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
-  const need = !cheat.instant && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${need}`;
+  const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${mode === 'creative' ? ' · creativa' : ''}${need}`;
 }
 
 function spawn() {
@@ -1339,6 +1351,7 @@ onkeydown = e => {
   if (/^Digit[1-9]$/.test(e.code)) choose(e.code[5] - 1);
   if (e.code === 'Pause' || e.code === 'Escape' && menu()) openMenu('pause');
   if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel.y = 0; }
+  if (e.code === 'Space' && !e.repeat && mode === 'creative') { if (performance.now() - spaceAt < 300) { player.fly = !player.fly; player.vel.y = 0; } spaceAt = performance.now(); }
   if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
   if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
   if (e.code === 'Place' && playing) place();
@@ -1381,7 +1394,7 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode }));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
@@ -1396,6 +1409,7 @@ for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(
 $('.instant').onchange = e => cheat.instant = e.target.checked;
 $('.can').onchange = drawCraft;
 $('.god').onchange = e => cheat.god = e.target.checked;
+$('.mode').onclick = () => setMode(mode === 'creative' ? 'survival' : 'creative');
 $('.xray').onchange = e => {
   cheat.xray = e.target.checked;
   for (const c of chunks.values()) if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; }
@@ -1405,7 +1419,7 @@ document.onpointerlockchange = () => setPlaying(!!document.pointerLockElement);
 document.body.style.setProperty('--n', TILES.length);
 document.body.style.setProperty('--img', `url(${atlas.toDataURL()})`);
 if (saved?.inv && !saved.slots) saved.inv.forEach((n, id) => n > 0 && give(id, n));
-drawInv();
+setMode(mode);
 if (saved) player.pos.fromArray(saved.pos); else spawn();
 requestAnimationFrame(loop);
 </script>
