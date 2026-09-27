@@ -98,7 +98,7 @@
   <button class="mcbtn" data-menu="cheat">Trucchi</button>
   <button class="mcbtn" data-menu="spells">Incantesimi</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
-    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T incantesimi (Tab completa)<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
+    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
     <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · ⏸ pausa</p>
   </details>
   <button class="mcbtn fresh">Nuovo mondo</button>
@@ -144,7 +144,8 @@ const GRAVEL = 20, SNOW = 21, COAL_ORE = 22, IRON_ORE = 23, STONEBRICK = 24, BOO
 const COAL = 28, IRON = 29, IPICK = 30, IAXE = 31, ISHOVEL = 32, CHEST = 33, LAVA = 34;
 const WALL = { 35: [1, 0], 36: [-1, 0], 37: [0, 1], 38: [0, -1] }, TORCHES = [TORCH, 35, 36, 37, 38];
 const DOOR = 39, DOORS = Array.from({ length: 16 }, (_, i) => 40 + i), isDoor = b => b >= 40 && b < 56;
-const FLOWS = [56, 57, 58, 59, 60, 61, 62], isWater = b => b === WATER || b >= 56 && b <= 62, level = b => b === WATER ? 0 : b - 55;
+const FLOWS = [56, 57, 58, 59, 60, 61, 62], isWater = b => b === WATER || b >= 56 && b <= 62, level = b => b === WATER || b === LAVA ? 0 : b >= 159 ? b - 158 : b - 55;
+const LAVAS = [159, 160, 161], isLava = b => b === LAVA || b >= 159 && b <= 161, fluidOf = b => isWater(b) ? WATER : isLava(b) ? LAVA : 0;
 const GOLD_ORE = 63, DIAMOND_ORE = 64, REDSTONE_ORE = 65, LAPIS_ORE = 66, EMERALD_ORE = 67, COPPER_ORE = 68;
 const IRON_BLOCK = 69, GOLD_BLOCK = 70, DIAMOND_BLOCK = 71, REDSTONE_BLOCK = 72, LAPIS_BLOCK = 73, EMERALD_BLOCK = 74, COPPER_BLOCK = 75, COAL_BLOCK = 76;
 const SANDSTONE = 77, MOSSY = 78, GRANITE = 79, DIORITE = 80, ANDESITE = 81, OBSIDIAN = 82, GLOWSTONE = 83, PUMPKIN = 84, MELON = 85;
@@ -158,7 +159,7 @@ const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 
 const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
 const CHERRY_LOG = 143, CHERRY_LEAVES = 144, CHERRY_PLANKS = 145, RED_SAND = 146, ORANGE_TC = 147, YELLOW_TC = 148, WHITE_TC = 149, BROWN_TC = 150;
-const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158;
+const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162;
 const BANDS = [ORANGE_TC, TERRACOTTA, YELLOW_TC, WHITE_TC, BROWN_TC, ORANGE_TC, TERRACOTTA];
 const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4, TUNDRA = 5, SAVANNA = 6, MESA = 7, SWAMP = 8, CHERRY = 9, MEADOW = 10;
 const BLOCKS = {
@@ -168,7 +169,7 @@ const BLOCKS = {
   [TABLE]: [21, 8, 22], [LAMP]: [23, 23, 23], [CHEST]: [37, 37, 38], [LAVA]: [39, 39, 39],
   35: [13, 13, 13], 36: [13, 13, 13], 37: [13, 13, 13], 38: [13, 13, 13],
 };
-const FLUID = [WATER, LAVA, ...FLOWS], GLOW = [LAMP, GLOWSTONE];
+const FLUID = [WATER, LAVA, ...FLOWS, ...LAVAS], GLOW = [LAMP, GLOWSTONE];
 const ITEM_TILE = {
   [TORCH]: 36, [STICK]: 24, [COAL]: 25, [IRON]: 26, [WPICK]: 27, [SPICK]: 28, [IPICK]: 29,
   [WAXE]: 30, [SAXE]: 31, [IAXE]: 32, [WSHOVEL]: 33, [SSHOVEL]: 34, [ISHOVEL]: 35, [DOOR]: 44,
@@ -179,7 +180,8 @@ const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', '
   'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia', 'Porta', ...DOORS.map(() => 'Porta')];
 for (const d of DOORS) BLOCKS[d] = [42, 42, 42];
 for (const f of FLOWS) { NAMES[f] = 'Acqua'; BLOCKS[f] = [12, 12, 12]; }
-const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED, ...PLANTS, CHERRY_LEAVES, ACACIA_LEAVES, ORB];
+for (const f of LAVAS) { NAMES[f] = 'Lava'; BLOCKS[f] = [39, 39, 39]; }
+const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED, ...PLANTS, CHERRY_LEAVES, ACACIA_LEAVES, ORB, LAVA, ...LAVAS];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
 const TOOLS = { pick: [WPICK, SPICK, IPICK, DPICK], axe: [WAXE, SAXE, IAXE, DAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL, DSHOVEL] };
 const SPEED = [1, 4, 8, 12, 16];
@@ -248,6 +250,7 @@ const RECIPES = [
   [{ [WOOL]: 1, [DANDELION]: 1 }, LEMON, 1],
   [{ [WOOL]: 1, [POPPY]: 1 }, PEACH, 1],
   [{ [STICK]: 1, [FEATHER]: 1 }, WAND, 1],
+  [{ [STICK]: 3, [LEAVES]: 2 }, BROOM, 1],
 ];
 for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_BLOCK], [REDSTONE, REDSTONE_BLOCK], [LAPIS, LAPIS_BLOCK], [EMERALD, EMERALD_BLOCK], [COPPER, COPPER_BLOCK], [COAL, COAL_BLOCK]])
   RECIPES.push([{ [m]: 9 }, b, 1], [{ [b]: 1 }, m, 9]);
@@ -419,6 +422,7 @@ add(DRY_GRASS, 'Erba secca', [T(() => jit([170, 165, 80], 0.15)), 2, T((x, y) =>
 add(RED_MUSHROOM, 'Fungo rosso', same((x, y) => y > 3 && y < 9 && Math.abs(x - 7.5) < 6 - (8 - y) * 0.6 ? jit((x * 3 + y * 5) % 7 ? [210, 40, 40] : [245, 245, 245]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
 add(BROWN_MUSHROOM, 'Fungo marrone', same((x, y) => y > 5 && y < 9 && Math.abs(x - 7.5) < 5 ? jit([150, 110, 80]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
 item(WAND, 'Bacchetta magica', (x, y) => (x + y === 15 || x + y === 16) && x > 2 && x < 14 ? (x > 11 ? [250, 245, 230] : x < 6 ? jit(x % 2 ? [60, 35, 20] : [110, 70, 40]) : jit([95, 60, 35], 0.06)) : NONE);
+item(BROOM, 'Scopa volante', (x, y) => x < 6 && y > 9 && Math.abs(x + y - 15.5) < 3.5 ? jit([205, 170, 90], 0.12) : (x + y === 15 || x + y === 16) && x < 15 ? jit(x === 6 ? [150, 40, 40] : [120, 80, 45], 0.06) : NONE);
 add(ORB, 'Luce magica', same((x, y) => jit(Math.hypot(x - 7.5, y - 7.5) < 4 ? [255, 255, 255] : [190, 225, 255], 0.04)), [0]);
 DROP[TALLGRASS] = DROP[DEADBUSH] = DROP[ORB] = AIR;
 const IDS = NAMES.map((_, id) => id);
@@ -688,7 +692,7 @@ function generate(cx, cz) {
   }
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) {
     d[i] = id;
-    if (FLOWS.includes(id)) flowQ.add([cx * CS + i % CS, i / (CS * CS) | 0, cz * CS + (i / CS | 0) % CS].join());
+    if (FLOWS.includes(id) || LAVAS.includes(id)) flowQ.add([cx * CS + i % CS, i / (CS * CS) | 0, cz * CS + (i / CS | 0) % CS].join());
   }
   return [d, heights];
 }
@@ -737,14 +741,26 @@ function quad(m, [dir, shade, , corners], x, y, z, tile, layer, size = [1, 1, 1]
   else m.idx[layer].push(n, n + 1, n + 2, n + 2, n + 1, n + 3);
 }
 
-const waterTop = (c, id, x, y, z) => FLOWS.includes(id) && !isWater(near(c, x, y + 1, z)) ? 1 - level(id) * 0.11 : 1;
+const surf = b => 1 - level(b) * (isLava(b) ? 0.22 : 0.11);
+
+function corner(c, x, y, z, k) {
+  let sum = 0, n = 0;
+  for (const [dx, dz] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
+    const b = near(c, x + dx, y, z + dz);
+    if (fluidOf(b) !== k) continue;
+    if (fluidOf(near(c, x + dx, y + 1, z + dz)) === k) return 1;
+    sum += surf(b);
+    n++;
+  }
+  return sum / n;
+}
 
 function buildMesh(c) {
   const m = { pos: [], nor: [], uv: [], col: [], sky: [], idx: [[], [], []] };
   c.torches = [];
   for (let y = 0; y < H; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const id = c.data[at(x, y, z)];
-    if (id === LAVA && !c.data[at(x, y + 1, z)] && (x + z) % 4 === 0) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 1.2, c.cz * CS + z + 0.5));
+    if (isLava(id) && !c.data[at(x, y + 1, z)] && (x + z) % 4 === 0) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 1.2, c.cz * CS + z + 0.5));
     if (TORCHES.includes(id) || GLOW.includes(id)) c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + (GLOW.includes(id) ? 0.5 : 0.8), c.cz * CS + z + 0.5));
     if (TORCHES.includes(id)) {
       const [dx, dz] = WALL[id] ?? [0, 0];
@@ -757,14 +773,14 @@ function buildMesh(c) {
     if (id === ORB) { c.torches.push(new THREE.Vector3(c.cx * CS + x + 0.5, y + 0.5, c.cz * CS + z + 0.5)); for (const f of FACES) quad(m, f, x + 0.35, y + 0.35, z + 0.35, BLOCKS[ORB][0], 2, [0.3, 0.3, 0.3]); }
     if (PLANTS.includes(id)) for (const f of CROSS) quad(m, f, x, y, z, BLOCKS[id][2], 0, undefined, undefined, skyOf(c, [0, 0, 0], x, y, z));
     if (!id || TORCHES.includes(id) || isDoor(id) || PLANTS.includes(id) || id === ORB || cheat.xray && !XRAY.includes(id)) continue;
-    const layer = isWater(id) ? 1 : GLOW.includes(id) || id === LAVA ? 2 : 0;
-    const tall = id === BED ? 0.5625 : waterTop(c, id, x, y, z);
+    const layer = isWater(id) ? 1 : GLOW.includes(id) || isLava(id) ? 2 : 0, k = fluidOf(id);
+    let tops;
     for (const f of FACES) {
-      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), low = isWater(n) && isWater(id) && !f[0][1] ? waterTop(c, n, x + f[0][0], y, z + f[0][2]) : 0;
-      if (low >= tall) continue;
-      const same = n === id || isWater(n) && isWater(id) && !low;
+      const n = near(c, x + f[0][0], y + f[0][1], z + f[0][2]), same = n === id || k && fluidOf(n) === k, v = m.pos.length / 3;
       if (n && !(CLEAR.includes(n) && !same) && !(cheat.xray && !XRAY.includes(n))) continue;
-      quad(m, f, x, y + low, z, BLOCKS[id][f[2]], layer, [1, tall - low, 1], layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
+      quad(m, f, x, y, z, BLOCKS[id][f[2]], layer, [1, id === BED ? 0.5625 : 1, 1], layer ? undefined : aoOf(c, f, x, y, z), skyOf(c, f[0], x, y, z));
+      if (k) tops ??= [0, 1].map(cx => [0, 1].map(cz => corner(c, x + cx, y, z + cz, k)));
+      if (k) f[3].forEach(([cx, cy, cz], i) => { if (cy) m.pos[(v + i) * 3 + 1] = y + tops[cx][cz]; });
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -801,26 +817,27 @@ function flush() {
 
 const wake = (x, y, z) => { for (const [dx, dy, dz] of [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]]) flowQ.add([x + dx, y + dy, z + dz].join()); };
 
-function incoming(x, y, z) {
+function incoming(x, y, z, k) {
   const up = get(x, y + 1, z);
-  if (isWater(up)) return Math.max(1, level(up));
+  if (fluidOf(up) === k) return Math.max(1, level(up));
   const best = Math.min(...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => {
     const n = get(x + dx, y, z + dz), under = get(x + dx, y - 1, z + dz);
-    return isWater(n) && (solid(under) || under === WATER) ? level(n) + 1 : 9;
+    return fluidOf(n) === k && (solid(under) || under === k) ? level(n) + 1 : 9;
   }));
-  return best <= 7 ? best : undefined;
+  return best <= (k === LAVA ? 3 : 7) ? best : undefined;
 }
 
 function flowTick() {
   const cells = [...flowQ].slice(0, 48);
   for (const k of cells) {
     flowQ.delete(k);
-    const [x, y, z] = k.split(',').map(Number), cur = get(x, y, z);
-    if (y < 1 || cur && cur !== LAVA && !FLOWS.includes(cur)) continue;
-    const lvl = incoming(x, y, z), next = lvl === undefined ? (cur === LAVA ? LAVA : AIR) : cur === LAVA ? OBSIDIAN : 55 + lvl;
+    const [x, y, z] = k.split(',').map(Number), cur = get(x, y, z), kind = fluidOf(cur);
+    if (y < 1 || cur && !kind || cur === WATER) continue;
+    const w = incoming(x, y, z, WATER), l = cur === LAVA ? undefined : incoming(x, y, z, LAVA);
+    const next = cur === LAVA ? (w ? OBSIDIAN : LAVA) : w && (l || kind === LAVA) || l && kind === WATER ? COBBLE : w ? 55 + w : l ? 158 + l : AIR;
     if (next === cur) continue;
     set(x, y, z, next, false);
-    if (next !== OBSIDIAN) wake(x, y, z);
+    wake(x, y, z);
   }
   if (cells.length) flush();
 }
@@ -965,7 +982,7 @@ const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: fal
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), slots = saved?.slots ?? Array(36).fill(null);
 const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
-const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) || id === WAND ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
+const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) || id === WAND || id === BROOM ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
 const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}'), history = [], locks = new Set(saved?.locks);
@@ -1011,9 +1028,10 @@ function ride(dt) {
 
 function update(dt) {
   if (player.riding) return ride(dt);
+  if (player.broom) return soar(dt);
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   const fluid = p.fly ? AIR : get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)), swim = FLUID.includes(fluid);
-  const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (fluid === LAVA ? 0.4 : swim ? 0.6 : 1);
+  const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (isLava(fluid) ? 0.4 : swim ? 0.6 : 1);
   p.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed;
   p.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * speed;
   if (p.fly) p.vel.y = (key('Space') - key('ShiftLeft')) * speed;
@@ -1031,7 +1049,7 @@ function vitals(dt, swim) {
   clock += dt;
   if (p.ground && !p.fly && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
   p.peak = p.ground || p.fly || swim ? p.pos.y : Math.max(p.peak, p.pos.y);
-  if ((at(0.1) === LAVA || at(1.2) === LAVA) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
+  if ((isLava(at(0.1)) || isLava(at(1.2))) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
   air = isWater(at(1.62)) ? air - dt : Math.min(10, air + dt * 4);
   if (air < 0) { air += 1; hurt(2); }
   if (clock - hurtAt > 4) hp = Math.min(20, hp + dt / 2);
@@ -1183,6 +1201,7 @@ function place() {
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
+  if (id === BROOM || player.broom) return mount();
   if (FOOD[id]) return eat(id);
   if (BUCKETS.includes(id)) return pour(id, r);
   if (!r?.prev || !id || !BLOCKS[id] && id !== DOOR) return;
@@ -1248,7 +1267,6 @@ function toggleDoor([x, y, z]) {
 
 function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
-  const lava = [[0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => get(x + dx, y + dy, z + dz) === LAVA);
   const out = isDoor(id) ? DOOR : DROP[id] ?? id, above = get(x, y + 1, z);
   if (out && mode !== 'creative') drop(out, 1, x + 0.5, y + 0.5, z + 0.5);
   if (PLANTS.includes(above) || above === TORCH) { if (DROP[above] ?? above) drop(DROP[above] ?? above, 1, x + 0.5, y + 1.5, z + 0.5); set(x, y + 1, z, AIR, false); }
@@ -1263,7 +1281,7 @@ function dig([x, y, z]) {
     saveChests();
   }
   burst([x, y, z], id, 14);
-  set(x, y, z, lava ? LAVA : AIR);
+  set(x, y, z, AIR);
   wake(x, y, z);
 }
 
@@ -1289,7 +1307,7 @@ function updateDrops(dt) {
     else g.position.copy(next);
     d.mesh.rotation.y += dt * 2;
     d.mesh.position.y = 0.15 + Math.sin(d.age * 3) * 0.06;
-    const near = d.age > 0.5 && dist < 0.6 && hp > 0, left = near ? give(d.id, d.n) : d.n, pick = near && !left, burnt = get(...g.position.toArray().map(Math.floor)) === LAVA;
+    const near = d.age > 0.5 && dist < 0.6 && hp > 0, left = near ? give(d.id, d.n) : d.n, pick = near && !left, burnt = isLava(get(...g.position.toArray().map(Math.floor)));
     if (left !== d.n) { d.n = left; drawInv(); }
     if (pick) sound(2600, 0.1, 0.05);
     if (pick || burnt) { scene.remove(g); if (d.mesh.geometry.type === 'BoxGeometry') d.mesh.geometry.dispose(); drops.splice(drops.indexOf(d), 1); }
@@ -1338,9 +1356,9 @@ const PRICE = {
   [DIRT]: 1, [COBBLE]: 1, [STONE]: 1, [SAND]: 1, [LOG]: 2, [BIRCH_LOG]: 2, [SPRUCE_LOG]: 2, [JUNGLE_LOG]: 2, [COAL]: 3, [IRON_ORE]: 5, [IRON]: 8,
   [GOLD_ORE]: 8, [GOLD]: 12, [COPPER]: 5, [DIAMOND]: 40, [EMERALD]: 30, [REDSTONE]: 4, [LAPIS]: 4, [WOOL]: 3, [PORK]: 2, [BEEF]: 2, [CHICKEN]: 2,
   [MUTTON]: 2, [PORK_C]: 4, [BEEF_C]: 5, [CHICKEN_C]: 4, [MUTTON_C]: 4, [LEATHER]: 3, [PUMPKIN]: 3, [MELON]: 3, [GLASS]: 2, [BED]: 12, [BUCKET]: 25,
-  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15,
+  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15, [BROOM]: 20,
 };
-const STOCK = [WAND, TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
+const STOCK = [WAND, BROOM, TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
 const value = id => PRICE[id] ?? 1;
 const PHRASES = ['Ciao!', 'Che bella giornata!', 'Hai visto gli unicorni? Si possono cavalcare!', 'Attento alle macchine!', 'Ti piace la nostra città?',
   'Di notte escono le lucciole ✨', 'Sto andando a fare la spesa', 'Adoro i fiori lilla', 'Hai già un letto? Di notte si dorme!', 'Nelle grotte ci sono bauli pieni di tesori'];
@@ -1405,7 +1423,7 @@ function stepAnimal(a, dt) {
   if (a.ground) { p.y = Math.floor(ny) + 1; a.vel.y = 0; } else p.y = ny;
   a.g.rotation.y = a.yaw;
   a.legs.forEach((l, i) => l.rotation.x = [1, -1, -1, 1][i] * (speed ? Math.sin(clock * 10) * 0.6 : 0));
-  if (get(Math.floor(p.x), Math.floor(p.y + 0.1), Math.floor(p.z)) === LAVA) a.hp = 0;
+  if (isLava(get(Math.floor(p.x), Math.floor(p.y + 0.1), Math.floor(p.z)))) a.hp = 0;
 }
 
 function updateAnimals(dt) {
@@ -1649,7 +1667,7 @@ function reducto(r, to) {
 function reparo() {
   const batch = history.pop();
   if (!batch) return "Non c'è niente da riparare";
-  for (const [x, y, z, id] of batch) if ((!get(x, y, z) || FLOWS.includes(get(x, y, z))) && !occupied(x, y, z)) {
+  for (const [x, y, z, id] of batch) if ((!get(x, y, z) || FLOWS.includes(get(x, y, z)) || LAVAS.includes(get(x, y, z))) && !occupied(x, y, z)) {
     set(x, y, z, id, false);
     glint(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5), '#8ff0a4', 0.8, spread(1));
   }
@@ -1665,7 +1683,7 @@ function aguamenti(r) {
 function glacius() {
   const f = raycast(true, 16);
   if (!f) return "Punta la bacchetta sull'acqua o sulla lava";
-  ball(f.hit, 3, (x, y, z) => { const id = get(x, y, z); if (isWater(id) || id === LAVA) set(x, y, z, id === LAVA ? OBSIDIAN : ICE, false); });
+  ball(f.hit, 3, (x, y, z) => { const id = get(x, y, z); if (fluidOf(id)) set(x, y, z, isLava(id) ? OBSIDIAN : ICE, false); });
   flush();
 }
 
@@ -1743,6 +1761,36 @@ function apparate(r) {
   player.peak = player.pos.y;
   sound(180, 0.5, 0.12);
   $('.fade').animate([{ opacity: 0.8 }, { opacity: 0 }], 500);
+}
+
+const broom = new THREE.Group();
+part(broom, 0.07, 0.07, 1.9, lambert('#7a4f2a')).position.z = -0.2;
+part(broom, 0.3, 0.3, 0.6, lambert('#d6b25e')).position.z = 0.95;
+part(broom, 0.12, 0.12, 0.08, lambert('#8a2f2f')).position.z = 0.62;
+broom.rotation.order = 'YXZ';
+broom.visible = false;
+scene.add(broom);
+
+function mount() {
+  player.broom = !player.broom;
+  player.riding = null;
+  player.fly = false;
+  player.peak = player.pos.y;
+  broom.visible = player.broom;
+  toast(player.broom ? '🧹 In volo! W vai dove guardi · Spazio sali · Shift scendi · click destro per scendere' : '🧹 Giù dalla scopa');
+}
+
+function soar(dt) {
+  const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, up = key('Space') - key('ShiftLeft');
+  const want = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(f * 16).add(new THREE.Vector3(Math.cos(p.yaw) * s * 8, up * 8, -Math.sin(p.yaw) * s * 8));
+  p.vel.lerp(want, Math.min(1, dt * 3));
+  const steps = Math.ceil(p.vel.length() * dt / 0.4);
+  p.ground = false;
+  for (let i = 0; i < steps; i++) for (const a of ['x', 'y', 'z']) moveAxis(a, p.vel[a] * dt / steps);
+  p.peak = p.pos.y;
+  broom.position.copy(p.pos).y += 0.8 + Math.sin(clock * 2) * 0.04;
+  broom.rotation.set(-p.vel.y * 0.02, p.yaw, Math.sin(clock * 1.5) * 0.05);
+  vitals(dt, false);
 }
 
 function updateMagic(dt) {
@@ -1965,7 +2013,7 @@ function drawChest() {
 function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
-  const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = isWater(fluid), hot = fluid === LAVA;
+  const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = isWater(fluid), hot = isLava(fluid);
   ambient.intensity = light * Math.PI;
   scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
   if (hot) scene.background.set(HOT);
@@ -2013,7 +2061,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins}${need}`;
 }
 
 function spawn() {
@@ -2053,7 +2101,7 @@ function loop(t) {
   updateCars(dt);
   if (dt) updateFlyers(dt, Math.sin(time / DAY * Math.PI * 2) > 0);
   drawHearts();
-  camera.fov += ((keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5 ? 85 : 75) - camera.fov) * 0.15;
+  camera.fov += ((p.broom ? p.vel.length() > 10 : keys.ShiftLeft && !p.fly && Math.hypot(p.vel.x, p.vel.z) > 5) ? 85 - camera.fov : 75 - camera.fov) * 0.15;
   camera.updateProjectionMatrix();
   lightTorches();
   tip.visible = lumos && heldId() === WAND;
@@ -2073,6 +2121,7 @@ onkeydown = e => {
   if (e.code === 'Space' && !e.repeat && mode === 'creative') { if (performance.now() - spaceAt < 300) { player.fly = !player.fly; player.vel.y = 0; } spaceAt = performance.now(); }
   if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
   if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
+  if (e.code === 'KeyI' && !e.repeat) openMenu(menu() ? null : 'spells');
   if (e.code === 'Place' && playing) place();
   if ((e.code === 'KeyT' || e.code === 'Slash') && !e.repeat && playing) { e.preventDefault(); $('.spell').value = ''; $('.spell').style.display = ''; $('.spell').focus(); }
 };
