@@ -159,7 +159,7 @@ const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 
 const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
 const CHERRY_LOG = 143, CHERRY_LEAVES = 144, CHERRY_PLANKS = 145, RED_SAND = 146, ORANGE_TC = 147, YELLOW_TC = 148, WHITE_TC = 149, BROWN_TC = 150;
-const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162;
+const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162, SNITCH = 163;
 const BANDS = [ORANGE_TC, TERRACOTTA, YELLOW_TC, WHITE_TC, BROWN_TC, ORANGE_TC, TERRACOTTA];
 const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4, TUNDRA = 5, SAVANNA = 6, MESA = 7, SWAMP = 8, CHERRY = 9, MEADOW = 10;
 const BLOCKS = {
@@ -422,6 +422,7 @@ add(DRY_GRASS, 'Erba secca', [T(() => jit([170, 165, 80], 0.15)), 2, T((x, y) =>
 add(RED_MUSHROOM, 'Fungo rosso', same((x, y) => y > 3 && y < 9 && Math.abs(x - 7.5) < 6 - (8 - y) * 0.6 ? jit((x * 3 + y * 5) % 7 ? [210, 40, 40] : [245, 245, 245]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
 add(BROWN_MUSHROOM, 'Fungo marrone', same((x, y) => y > 5 && y < 9 && Math.abs(x - 7.5) < 5 ? jit([150, 110, 80]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
 item(WAND, 'Bacchetta magica', (x, y) => (x + y === 15 || x + y === 16) && x > 2 && x < 14 ? (x > 11 ? [250, 245, 230] : x < 6 ? jit(x % 2 ? [60, 35, 20] : [110, 70, 40]) : jit([95, 60, 35], 0.06)) : NONE);
+item(SNITCH, "Boccino d'oro", (x, y) => Math.hypot(x - 7.5, y - 8.5) < 3 ? jit([250, 205, 50], 0.08) : y > 3 && y < 9 && (x < 5 || x > 10) && Math.abs(y - 7 + Math.abs(x - 7.5) * 0.4) < 1.6 ? jit([245, 245, 240], 0.03) : NONE);
 item(BROOM, 'Scopa volante', (x, y) => x < 6 && y > 9 && Math.abs(x + y - 15.5) < 3.5 ? jit([205, 170, 90], 0.12) : (x + y === 15 || x + y === 16) && x < 15 ? jit(x === 6 ? [150, 40, 40] : [120, 80, 45], 0.06) : NONE);
 add(ORB, 'Luce magica', same((x, y) => jit(Math.hypot(x - 7.5, y - 7.5) < 4 ? [255, 255, 255] : [190, 225, 255], 0.04)), [0]);
 DROP[TALLGRASS] = DROP[DEADBUSH] = DROP[ORB] = AIR;
@@ -584,6 +585,7 @@ function roof(d, x0, z0, x1, z1, y, id, gable) {
 function role(cx, cz, city) {
   const r = hash(cx * 7 + 3, cz * 11 - 5);
   if (cx * CS === city.cx && cz * CS === city.cz) return plaza;
+  if (!city.ruin && cx * CS === city.cx + CS && Math.abs(cz * CS - city.cz) <= CS) return pitch;
   return city.ruin ? (r < 0.3 ? park : house) : r < 0.14 ? shop : r < 0.24 ? statue : r < 0.34 ? park : r < 0.5 ? tower : house;
 }
 
@@ -637,6 +639,17 @@ function shop(d, cx, cz, city) {
   for (let z = 3; z < 5; z++) for (const x of [8, 9]) d[at(x, h, z)] = ROAD;
 }
 
+function pitch(d, ox, oz, city) {
+  const h = city.h, end = (oz - city.cz) / CS, goal = end < 0 ? 3 : 12;
+  fill(d, 0, h, 0, 15, h, 15, (x, y, z) => x === 2 || x === 13 || !end && (z === 8 || Math.abs(Math.hypot(x - 7.5, z - 8) - 3) < 0.5) ? WOOL : GRASS);
+  fill(d, 0, h + 1, 0, 15, h + 3, 15, (x, y, z) => x > 0 && x < 15 || y - h > (z % 4 ? 2 : 3) ? AIR : (z >> 1) % 2 ? GOLD_BLOCK : x ? REDSTONE_BLOCK : EMERALD_BLOCK);
+  if (!end) return;
+  for (const [x, top] of [[3, 7], [8, 10], [13, 7]]) {
+    fill(d, x, h + 1, goal, x, h + top, goal, () => GOLD_BLOCK);
+    for (let a = 0; a < 16; a++) d[at(x + Math.round(Math.cos(a / 16 * Math.PI * 2) * 2), h + top + 2 + Math.round(Math.sin(a / 16 * Math.PI * 2) * 2), goal)] = GOLD_BLOCK;
+  }
+}
+
 function plaza(d, cx, cz, city) {
   const h = city.h, ruin = city.ruin;
   fill(d, 3, h, 3, 15, h, 15, (x, y, z) => ruin ? (hash(x, z + cx) < 0.4 ? GRAVEL : MOSSY) : (x + z) % 2 ? SMOOTH : STONEBRICK);
@@ -686,9 +699,10 @@ function generate(cx, cz) {
     else decorate(d, x, z, wx, wz, h, top, b);
   }
   if (built) {
-    role(cx, cz, city)(d, cx * CS, cz * CS, city);
-    fill(d, 3, city.h + 1, 3, 3, city.h + 3, 3, () => STONEBRICK);
-    if (!city.ruin) d[at(3, city.h + 4, 3)] = LAMP;
+    const fn = role(cx, cz, city);
+    fn(d, cx * CS, cz * CS, city);
+    if (fn !== pitch) fill(d, 3, city.h + 1, 3, 3, city.h + 3, 3, () => STONEBRICK);
+    if (fn !== pitch && !city.ruin) d[at(3, city.h + 4, 3)] = LAMP;
   }
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) {
     d[i] = id;
@@ -987,7 +1001,7 @@ const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}'), history = [], locks = new Set(saved?.locks);
 let chestAt = '';
-let coins = saved?.coins ?? 0, shopper = null, bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
+let caught = saved?.caught ?? 0, snitch = null, coins = saved?.coins ?? 0, shopper = null, bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
@@ -1356,7 +1370,7 @@ const PRICE = {
   [DIRT]: 1, [COBBLE]: 1, [STONE]: 1, [SAND]: 1, [LOG]: 2, [BIRCH_LOG]: 2, [SPRUCE_LOG]: 2, [JUNGLE_LOG]: 2, [COAL]: 3, [IRON_ORE]: 5, [IRON]: 8,
   [GOLD_ORE]: 8, [GOLD]: 12, [COPPER]: 5, [DIAMOND]: 40, [EMERALD]: 30, [REDSTONE]: 4, [LAPIS]: 4, [WOOL]: 3, [PORK]: 2, [BEEF]: 2, [CHICKEN]: 2,
   [MUTTON]: 2, [PORK_C]: 4, [BEEF_C]: 5, [CHICKEN_C]: 4, [MUTTON_C]: 4, [LEATHER]: 3, [PUMPKIN]: 3, [MELON]: 3, [GLASS]: 2, [BED]: 12, [BUCKET]: 25,
-  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15, [BROOM]: 20,
+  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15, [BROOM]: 20, [SNITCH]: 50,
 };
 const STOCK = [WAND, BROOM, TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
 const value = id => PRICE[id] ?? 1;
@@ -1466,7 +1480,7 @@ function drive(c, dt) {
   if (c.left <= 0) {
     p.x = Math.round((p.x - 1.5) / 16) * 16 + 1.5;
     p.z = Math.round((p.z - 1.5) / 16) * 16 + 1.5;
-    const ok = d => { const cx = Math.floor((p.x + Math.min(DIRS[d][0], 0) * 16) / 16), cz = Math.floor((p.z + Math.min(DIRS[d][1], 0) * 16) / 16); return Math.hypot(cx * 16 + 8 - c.city.cx, cz * 16 + 8 - c.city.cz) < 44; };
+    const ok = d => { const cx = Math.floor((p.x + Math.min(DIRS[d][0], 0) * 16) / 16), cz = Math.floor((p.z + Math.min(DIRS[d][1], 0) * 16) / 16); return Math.hypot(cx * 16 + 8 - c.city.cx, cz * 16 + 8 - c.city.cz) < 44 && role(cx, cz, c.city) !== pitch; };
     const opts = [0, 1, 2, 3].filter(ok), ahead = opts.filter(d => d !== (c.dir + 2) % 4);
     c.dir = choice(ahead.length ? ahead : opts.length ? opts : [c.dir]);
     c.left = 16;
@@ -1793,6 +1807,76 @@ function soar(dt) {
   vitals(dt, false);
 }
 
+function makeSnitch() {
+  const g = new THREE.Group(), gold = lambert('#ffcf33'), white = lambert('#ffffff');
+  gold.emissive.set('#664400');
+  part(g, 0.22, 0.22, 0.22, gold);
+  const wings = [-1, 1].map(sx => { const w = part(g, 0.4, 0.02, 0.18, white); w.geometry.translate(sx * 0.2, 0, 0); return w; });
+  g.position.copy(player.pos).add(new THREE.Vector3(rnd() * 40 - 20, 6 + rnd() * 6, rnd() * 40 - 20));
+  scene.add(g);
+  snitch = { g, wings, mats: [gold, white], vel: new THREE.Vector3(), aim: g.position.clone(), t: 0 };
+}
+
+function updateSnitch(dt) {
+  if (!snitch) return void (player.broom && rnd() < dt * 0.15 && makeSnitch());
+  const s = snitch, p = s.g.position, away = p.clone().sub(camera.position), d = away.length();
+  if ((s.t -= dt) < 0 || solid(get(...p.toArray().map(Math.floor)))) {
+    s.t = 0.3 + rnd();
+    s.aim = p.clone().add(spread(20));
+    s.aim.y = THREE.MathUtils.clamp(s.aim.y, height(Math.floor(s.aim.x), Math.floor(s.aim.z)) + 3, H + 10);
+  }
+  const dir = s.aim.clone().sub(p).normalize();
+  if (d < 8) dir.addScaledVector(away.normalize(), 1.5).normalize();
+  s.vel.lerp(dir.multiplyScalar(d < 8 ? 13 : 7), Math.min(1, dt * 5));
+  p.addScaledVector(s.vel, dt);
+  s.g.rotation.y = Math.atan2(s.vel.x, s.vel.z);
+  s.wings.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * Math.sin(clock * 40) * 0.8);
+  if (rnd() < dt * 20) glint(p.clone(), '#ffd43b', 0.5, new THREE.Vector3());
+  if (d < 1.8) return catchSnitch();
+  if (d > 80) removeSnitch();
+}
+
+function catchSnitch() {
+  const p = snitch.g.position;
+  for (let i = 0; i < 40; i++) glint(p.clone(), choice(['#ffd43b', '#ffffff', '#ff6b6b']), 1.2, spread(10));
+  if (give(SNITCH, 1)) drop(SNITCH, 1, p.x, p.y, p.z);
+  toast(`🏆 Hai preso il Boccino d'oro! +150 punti · boccini presi: ${++caught}`);
+  sound(3200, 0.3, 0.6);
+  removeSnitch();
+  drawInv();
+}
+
+function removeSnitch() {
+  scene.remove(snitch.g);
+  snitch.g.traverse(o => o.geometry?.dispose());
+  snitch.mats.forEach(m => m.dispose());
+  snitch = null;
+}
+
+const team = [];
+function makeFlier(city, i) {
+  const g = new THREE.Group(), mats = [i % 2 ? '#1e7b3c' : '#b3261e', choice(SKINS), '#7a4f2a', '#d6b25e'].map(lambert), [robe, skin, wood, straw] = mats;
+  part(g, 0.5, 0.7, 0.3, robe).position.y = 1;
+  part(g, 0.45, 0.45, 0.45, skin).position.y = 1.58;
+  part(g, 0.4, 0.3, 0.5, robe).position.set(0, 0.6, 0.15);
+  part(g, 0.07, 0.07, 1.8, wood).position.set(0, 0.5, 0.2);
+  part(g, 0.3, 0.3, 0.5, straw).position.set(0, 0.5, -0.9);
+  scene.add(g);
+  return { g, mats, city, phase: i / 6 * Math.PI * 2 };
+}
+
+function updateQuidditch(dt) {
+  const city = cityAt(player.pos.x, player.pos.z);
+  if (!team.length && city && !city.ruin) for (let i = 0; i < 6; i++) team.push(makeFlier(city, i));
+  for (const f of team) {
+    const t = clock * 0.5 + f.phase, c = f.city, g = f.g.position, prev = g.clone();
+    g.set(c.cx + 24 + Math.sin(t * 1.7) * 5, c.h + 9 + Math.sin(t * 1.3) * 3, c.cz + 8 + Math.sin(t) * 18);
+    if (dt) f.g.rotation.y = Math.atan2(g.x - prev.x, g.z - prev.z);
+  }
+  if (!team.length || team[0].g.position.distanceTo(player.pos) < 100) return;
+  for (const f of team.splice(0)) { scene.remove(f.g); f.g.traverse(o => o.geometry?.dispose()); f.mats.forEach(m => m.dispose()); }
+}
+
 function updateMagic(dt) {
   if (patronus) updatePatronus(dt);
   if (!levi) return;
@@ -2098,6 +2182,8 @@ function loop(t) {
   updateDrops(dt);
   updateAnimals(dt);
   updateMagic(dt);
+  updateSnitch(dt);
+  updateQuidditch(dt);
   updateCars(dt);
   if (dt) updateFlyers(dt, Math.sin(time / DAY * Math.PI * 2) > 0);
   drawHearts();
@@ -2163,7 +2249,7 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks] }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught }));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
