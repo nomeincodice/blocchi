@@ -146,9 +146,12 @@ const WOOL = 109, BED = 110, PORK = 111, PORK_C = 112, BEEF = 113, BEEF_C = 114,
 const PINK = 129, LILAC = 130, MINT = 131, SKYBLUE = 132, LEMON = 133, PEACH = 134, PASTELS = [129, 130, 131, 132, 133, 134], ROAD = 135, ROAD_LINE = 136;
 const TALLGRASS = 125, POPPY = 126, DANDELION = 127, DEADBUSH = 128, TULIP = 137, CORNFLOWER = 138, ALLIUM = 139;
 const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 142];
-const PLANTS = [125, 126, 127, 128, 137, 138, 139], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
+const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
-const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4;
+const CHERRY_LOG = 143, CHERRY_LEAVES = 144, CHERRY_PLANKS = 145, RED_SAND = 146, ORANGE_TC = 147, YELLOW_TC = 148, WHITE_TC = 149, BROWN_TC = 150;
+const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156;
+const BANDS = [ORANGE_TC, TERRACOTTA, YELLOW_TC, WHITE_TC, BROWN_TC, ORANGE_TC, TERRACOTTA];
+const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4, TUNDRA = 5, SAVANNA = 6, MESA = 7, SWAMP = 8, CHERRY = 9, MEADOW = 10;
 const BLOCKS = {
   [GRASS]: [0, 2, 1], [DIRT]: [2, 2, 2], [STONE]: [3, 3, 3], [COBBLE]: [4, 4, 4], [SAND]: [5, 5, 5], [LOG]: [6, 6, 7], [PLANKS]: [8, 8, 8],
   [LEAVES]: [9, 9, 9], [GLASS]: [10, 10, 10], [BRICKS]: [11, 11, 11], [WATER]: [12, 12, 12], [TORCH]: [13, 13, 13], [GRAVEL]: [14, 14, 14],
@@ -167,7 +170,7 @@ const NAMES = ['', 'Erba', 'Terra', 'Pietra', 'Pietrisco', 'Sabbia', 'Tronco', '
   'Carbone', 'Lingotto di ferro', 'Piccone di ferro', 'Ascia di ferro', 'Pala di ferro', 'Baule', 'Lava', 'Torcia', 'Torcia', 'Torcia', 'Torcia', 'Porta', ...DOORS.map(() => 'Porta')];
 for (const d of DOORS) BLOCKS[d] = [42, 42, 42];
 for (const f of FLOWS) { NAMES[f] = 'Acqua'; BLOCKS[f] = [12, 12, 12]; }
-const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED, ...PLANTS];
+const CLEAR = [LEAVES, GLASS, WATER, ...FLOWS, ...TORCHES, ...DOORS, BIRCH_LEAVES, SPRUCE_LEAVES, JUNGLE_LEAVES, BED, ...PLANTS, CHERRY_LEAVES, ACACIA_LEAVES];
 const DROP = { [GRASS]: DIRT, [STONE]: COBBLE, [COAL_ORE]: COAL, 35: TORCH, 36: TORCH, 37: TORCH, 38: TORCH };
 const TOOLS = { pick: [WPICK, SPICK, IPICK, DPICK], axe: [WAXE, SAXE, IAXE, DAXE], shovel: [WSHOVEL, SSHOVEL, ISHOVEL, DSHOVEL] };
 const SPEED = [1, 4, 8, 12, 16];
@@ -227,6 +230,8 @@ const RECIPES = [
   [{ [CHICKEN]: 1, [COAL]: 1 }, CHICKEN_C, 1],
   [{ [MUTTON]: 1, [COAL]: 1 }, MUTTON_C, 1],
   [{ [IRON]: 3 }, BUCKET, 1],
+  [{ [CHERRY_LOG]: 1 }, CHERRY_PLANKS, 4],
+  [{ [ACACIA_LOG]: 1 }, ACACIA_PLANKS, 4],
   [{ [WOOL]: 1, [TULIP]: 1 }, PINK, 1],
   [{ [WOOL]: 1, [ALLIUM]: 1 }, LILAC, 1],
   [{ [WOOL]: 1, [LEAVES]: 1 }, MINT, 1],
@@ -390,6 +395,19 @@ const PAIL = fill => (x, y) => y < 4 || y > 13 || x < 3 + (y - 4 >> 2) || x > 12
 item(BUCKET, 'Secchio', PAIL());
 item(WATER_BUCKET, "Secchio d'acqua", PAIL([60, 110, 220]));
 item(LAVA_BUCKET, 'Secchio di lava', PAIL([240, 110, 30]));
+add(CHERRY_LOG, 'Tronco di ciliegio', [T(LOGTOP([90, 50, 60], [230, 160, 170])), 0, T(x => jit(dim([90, 50, 60], x % 4 ? 1 : 0.7)))], [3, 'axe']);
+add(CHERRY_LEAVES, 'Foglie di ciliegio', same(LEAF([240, 170, 205])), [0.3]);
+add(CHERRY_PLANKS, 'Assi di ciliegio', same(PLANK([230, 175, 165])), [3, 'axe']);
+add(ACACIA_LOG, 'Tronco di acacia', [T(LOGTOP([110, 105, 95], [200, 110, 55])), 0, T(x => jit(dim([110, 105, 95], x % 3 ? 1 : 0.75)))], [3, 'axe']);
+add(ACACIA_LEAVES, 'Foglie di acacia', same(LEAF([120, 150, 55])), [0.3]);
+add(ACACIA_PLANKS, 'Assi di acacia', same(PLANK([195, 105, 55])), [3, 'axe']);
+for (const b of [CHERRY_LOG, ACACIA_LOG]) BLOCKS[b][1] = BLOCKS[b][0];
+add(RED_SAND, 'Sabbia rossa', same(() => jit([200, 110, 60], 0.06)), [0.75, 'shovel']);
+[['Terracotta arancione', [180, 100, 50]], ['Terracotta gialla', [190, 140, 60]], ['Terracotta bianca', [210, 180, 160]], ['Terracotta marrone', [110, 75, 55]]]
+  .forEach(([n, c], i) => add(ORANGE_TC + i, n, same(() => jit(c, 0.04)), [4, 'pick', 1]));
+add(DRY_GRASS, 'Erba secca', [T(() => jit([170, 165, 80], 0.15)), 2, T((x, y) => y < 3 || y < 5 && rnd() < 0.5 ? jit([170, 165, 80], 0.15) : jit(C.dirt))], [0.9, 'shovel'], DIRT);
+add(RED_MUSHROOM, 'Fungo rosso', same((x, y) => y > 3 && y < 9 && Math.abs(x - 7.5) < 6 - (8 - y) * 0.6 ? jit((x * 3 + y * 5) % 7 ? [210, 40, 40] : [245, 245, 245]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
+add(BROWN_MUSHROOM, 'Fungo marrone', same((x, y) => y > 5 && y < 9 && Math.abs(x - 7.5) < 5 ? jit([150, 110, 80]) : y >= 9 && x > 6 && x < 9 ? jit([230, 225, 210]) : NONE), [0]);
 DROP[TALLGRASS] = DROP[DEADBUSH] = AIR;
 const IDS = NAMES.map((_, id) => id);
 const ICON = IDS.map(id => ITEM_TILE[id] ?? BLOCKS[id]?.[2]);
@@ -420,10 +438,16 @@ function noise3(x, y, z) {
   return l(l(l(h(0, 0, 0), h(1, 0, 0), u), l(h(0, 1, 0), h(1, 1, 0), u), v), l(l(h(0, 0, 1), h(1, 0, 1), u), l(h(0, 1, 1), h(1, 1, 1), u), v), w);
 }
 const cave = (x, y, z) => Math.abs(noise3(x / 16, y / 10, z / 16) - 0.5) < 0.05 && Math.abs(noise3(x / 16 + 40, y / 10, z / 16) - 0.5) < 0.05;
-const height = (x, z) => Math.min(H - 16, Math.floor(12 + noise(x / 64, z / 64) * 30 + noise(x / 16 + 100, z / 16) * 6 + noise(x / 4 + 200, z / 4) * 1.5 + Math.max(0, noise(x / 110 + 700, z / 110) - 0.55) * 130));
+const mountain = (x, z) => 90 * Math.max(0, (noise(x / 160 + 700, z / 160) - 0.5) * 2) ** 1.8;
+const height = (x, z) => Math.min(H - 16, Math.floor(12 + noise(x / 64, z / 64) * 30 + noise(x / 16 + 100, z / 16) * 6 + noise(x / 4 + 200, z / 4) * 1.5 + mountain(x, z)));
 function biome(x, z) {
-  const t = noise(x / 180 + 500, z / 180), m = noise(x / 180 + 900, z / 180 + 900);
-  return t > 0.6 ? (m < 0.5 ? DESERT : JUNGLE) : t < 0.38 ? TAIGA : m > 0.58 ? FOREST : PLAINS;
+  const wx = x + (noise(x / 70 + 311, z / 70) - 0.5) * 80, wz = z + (noise(x / 70, z / 70 + 911) - 0.5) * 80, j = (hash(x * 3 + 1, z * 5 - 7) - 0.5) * 0.04;
+  const t = noise(wx / 150 + 500, wz / 150) + j, m = noise(wx / 150 + 900, wz / 150 + 900) + j, f = noise(wx / 220 + 77, wz / 220 - 77) + j;
+  if (t < 0.32) return m < 0.47 ? TUNDRA : TAIGA;
+  if (t > 0.63) return m < 0.38 ? DESERT : m < 0.5 ? MESA : m < 0.63 ? SAVANNA : JUNGLE;
+  if (f > 0.68) return m > 0.5 ? CHERRY : MEADOW;
+  if (m > 0.66) return SWAMP;
+  return m < 0.47 ? PLAINS : FOREST;
 }
 const at = (x, y, z) => x + z * CS + y * CS * CS;
 const ck = (cx, cz) => cx + ',' + cz;
@@ -463,27 +487,53 @@ function ore(x, y, z) {
 
 function surface(h, b, wx, wz) {
   if (h <= SEA - 3) return noise(wx / 8 + 50, wz / 8) > 0.6 ? GRAVEL : noise(wx / 8 + 80, wz / 8) > 0.65 ? CLAY : SAND;
-  if (h > 60) return SNOW;
-  if (h > 52) return STONE;
-  if (h < 22 || b === DESERT) return SAND;
-  return b === TAIGA && h > 38 ? SNOW : GRASS;
+  const snow = 60 + noise(wx / 10, wz / 10 + 55) * 8 + (hash(wx, wz) - 0.5) * 3, rock = snow - 10 + noise(wx / 7 + 9, wz / 7) * 6;
+  if (h > snow) return SNOW;
+  if (h > rock) return STONE;
+  if (h < 22) return b === MESA ? RED_SAND : SAND;
+  return [GRASS, GRASS, SAND, GRASS, GRASS, SNOW, DRY_GRASS, RED_SAND, GRASS, GRASS, GRASS][b];
 }
 
-const TREES = [0.01, 0.045, 0, 0.07, 0.03];
+function acacia(d, x, y, z, k) {
+  const [dx, dz] = [[1, 0], [0, 1], [-1, 0], [0, -1]][k * 4 | 0];
+  for (let i = 0; i < 4; i++) d[at(x, y + i, z)] = ACACIA_LOG;
+  d[at(x + dx, y + 4, z + dz)] = ACACIA_LOG;
+  blob(d, x + dx, y + 5, z + dz, 2, ACACIA_LEAVES);
+  blob(d, x + dx, y + 6, z + dz, 1, ACACIA_LEAVES);
+}
+
+function cherry(d, x, y, z, k) {
+  const h = 5 + (k * 2 | 0);
+  [2, 3, 3, 2].forEach((r, i) => blob(d, x, y + h - 2 + i, z, r, CHERRY_LEAVES));
+  for (let i = 0; i < h; i++) d[at(x, y + i, z)] = CHERRY_LOG;
+}
+
+function swampTree(d, x, y, z, k) {
+  const h = 5 + (k * 2 | 0);
+  tree(d, x, y, z, LOG, LEAVES, h);
+  for (const [dx, dz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) for (let i = 1; i <= 1 + (hash(x + dx, z + dz + y) * 3 | 0); i++) d[at(x + dx, y + h - 2 - i, z + dz)] ||= JUNGLE_LEAVES;
+}
+
+const TREES = [0.01, 0.045, 0, 0.07, 0.03, 0.004, 0.006, 0, 0.02, 0.04, 0.002];
+const GRASSY = [0.12, 0.1, 0, 0.3, 0.05, 0, 0.3, 0, 0.2, 0.15, 0.5], BLOOM = [0.04, 0.03, 0, 0.02, 0.01, 0, 0.005, 0, 0.03, 0.08, 0.35];
+const TREEFN = [
+  (d, x, y, z, k) => tree(d, x, y, z, LOG, LEAVES, 4 + (k * 3 | 0)),
+  (d, x, y, z, k) => k < 0.4 ? tree(d, x, y, z, BIRCH_LOG, BIRCH_LEAVES, 5 + (k * 5 | 0)) : tree(d, x, y, z, LOG, LEAVES, 4 + (k * 3 | 0)),
+  null, (d, x, y, z, k) => jungle(d, x, y, z, 9 + (k * 4 | 0)), (d, x, y, z, k) => spruce(d, x, y, z, 6 + (k * 4 | 0)),
+  (d, x, y, z, k) => spruce(d, x, y, z, 5 + (k * 3 | 0)), acacia, null, swampTree, cherry, (d, x, y, z, k) => tree(d, x, y, z, LOG, LEAVES, 4 + (k * 3 | 0)),
+];
 function decorate(d, x, z, wx, wz, h, top, b) {
-  const r = hash(wx, wz + 7777), k = hash(wx + 3, wz);
+  const r = hash(wx, wz + 7777), k = hash(wx + 3, wz), g = hash(wx + 11, wz - 5);
   if (h + 16 >= H) return;
-  if (b === DESERT && top === SAND && h >= 22 && r < 0.01) for (let i = 1; i <= 1 + (k * 3 | 0); i++) d[at(x, h + i, z)] = CACTUS;
-  if (b === DESERT && top === SAND && h >= 22 && r > 0.99) d[at(x, h + 1, z)] = DEADBUSH;
-  if (top !== GRASS) return;
-  const g = hash(wx + 11, wz - 5);
-  if (g < [0.12, 0.1, 0, 0.3, 0.05][b]) d[at(x, h + 1, z)] = g < 0.04 ? FLOWERS[(g * 1e4 | 0) % 5] : TALLGRASS;
-  if (r > 0.998) return void (d[at(x, h + 1, z)] = b === JUNGLE ? MELON : PUMPKIN);
-  if (r >= TREES[b] || x < 3 || x > 12 || z < 3 || z > 12) return;
-  if (b === TAIGA) spruce(d, x, h + 1, z, 6 + (k * 4 | 0));
-  else if (b === JUNGLE) jungle(d, x, h + 1, z, 9 + (k * 4 | 0));
-  else if (b === FOREST && k < 0.4) tree(d, x, h + 1, z, BIRCH_LOG, BIRCH_LEAVES, 5 + (k * 5 | 0));
-  else tree(d, x, h + 1, z, LOG, LEAVES, 4 + (k * 3 | 0));
+  if ((b === DESERT || b === MESA) && (top === SAND || top === RED_SAND) && h >= 22) {
+    if (r < 0.01) for (let i = 1; i <= 1 + (k * 3 | 0); i++) d[at(x, h + i, z)] = CACTUS;
+    if (r > 0.99) d[at(x, h + 1, z)] = DEADBUSH;
+    return;
+  }
+  if (top !== GRASS && top !== DRY_GRASS && !(top === SNOW && b === TUNDRA)) return;
+  if (g < GRASSY[b]) d[at(x, h + 1, z)] = g >= BLOOM[b] ? TALLGRASS : b === SWAMP ? (g < 0.015 ? RED_MUSHROOM : BROWN_MUSHROOM) : FLOWERS[(g * 1e4 | 0) % 5];
+  if (r > 0.998 && top === GRASS) return void (d[at(x, h + 1, z)] = b === JUNGLE ? MELON : PUMPKIN);
+  if (r < TREES[b] && x > 2 && x < 13 && z > 2 && z < 13) TREEFN[b](d, x, h + 1, z, k);
 }
 
 const CITY = 256, cities = new Map();
@@ -607,11 +657,13 @@ function generate(cx, cz) {
   for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = ground(cx * CS + x, cz * CS + z);
   const city = cityAt(cx * CS + 8, cz * CS + 8), built = city && Math.hypot(cx * CS + 8 - city.cx, cz * CS + 8 - city.cz) < 44;
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
-    const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18], b = biome(wx, wz), top = surface(h, b, wx, wz);
-    const under = top === GRASS || top === SNOW ? DIRT : top === SAND && b === DESERT && h >= 22 ? SANDSTONE : top;
-    for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - 4 ? under : ore(wx, y, wz);
+    const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18], b = biome(wx, wz);
+    let top = surface(h, b, wx, wz);
+    const under = top === GRASS || top === SNOW || top === DRY_GRASS ? DIRT : top === SAND && b === DESERT && h >= 22 ? SANDSTONE : top, layer = top === RED_SAND && h >= 22 ? 14 : 4;
+    for (let y = 0; y <= h; y++) d[at(x, y, z)] = y === h ? top : y > h - layer ? (layer > 4 ? BANDS[y % 7] : under) : ore(wx, y, wz);
     carve(d, x, z, wx, wz, h);
-    for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = WATER;
+    for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = b === TUNDRA && y === SEA ? ICE : WATER;
+    if (b === SWAMP && top === GRASS && noise(wx / 7 + 3, wz / 7) > 0.62) { d[at(x, h, z)] = WATER; top = WATER; }
     if (built) d[at(x, h, z)] = x > 2 && z > 2 ? GRASS : city.ruin && hash(wx, wz) < 0.3 ? GRAVEL : x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD;
     else decorate(d, x, z, wx, wz, h, top, b);
   }
@@ -1276,8 +1328,9 @@ function spawnAnimal() {
   if (animals.length >= 12 || !chunks.get(ck(Math.floor(x / CS), Math.floor(z / CS)))?.mesh) return;
   let y = H - 1;
   while (y > 0 && !get(x, y, z)) y--;
-  const b = biome(x, z), kinds = b === DESERT ? [] : b === TAIGA ? ['sheep'] : b === JUNGLE ? ['chicken', 'pig'] : Object.keys(ANIMALS);
-  if (kinds.length && (get(x, y, z) === GRASS || get(x, y, z) === SNOW)) makeAnimal(kinds[rnd() * kinds.length | 0], x + 0.5, y + 1, z + 0.5);
+  const all = ['pig', 'cow', 'sheep', 'chicken', 'unicorn'];
+  const kinds = [all, all, [], ['chicken', 'pig'], ['sheep'], ['sheep'], ['cow', 'sheep'], [], ['chicken', 'pig'], ['sheep', 'unicorn', 'unicorn'], ['cow', 'sheep', 'unicorn']][biome(x, z)];
+  if (kinds.length && [GRASS, SNOW, DRY_GRASS].includes(get(x, y, z))) makeAnimal(kinds[rnd() * kinds.length | 0], x + 0.5, y + 1, z + 0.5);
 }
 
 function stepAnimal(a, dt) {
