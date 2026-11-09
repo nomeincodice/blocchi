@@ -62,6 +62,7 @@
   .progress { width: 48px; height: 12px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo); }
   .progress i { display: block; width: 0; height: 100%; background: var(--hud); }
   .hint { max-width: 22rem; font-size: 13px; }
+  .gui .field { width: min(18rem, 70vw); height: auto; padding: 6px 8px; font: inherit; }
   .slot.on { outline: 3px solid var(--pick); outline-offset: -3px; }
   .logo { margin: 0; font-size: clamp(44px, 13vh, 104px); letter-spacing: 6px; color: var(--logo); text-shadow: 4px 4px 0 var(--logo-shadow), 8px 8px 0 var(--edge); }
   .splash { margin: -12px 0 12px; color: var(--splash); text-shadow: 2px 2px var(--logo-shadow); rotate: -8deg; translate: 110px 0; animation: pulse 0.6s ease-in-out alternate infinite; }
@@ -113,6 +114,7 @@
   <button class="mcbtn" data-menu="map">Mappa</button>
   <button class="mcbtn" data-menu="trophies">Trofei</button>
   <button class="mcbtn music">Musica: sì</button>
+  <button class="mcbtn" data-menu="cloud">☁️ Account e salvataggio online</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
     <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · E inventario: click prendi/posa, click destro metà, Shift+click sposta · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei · V visuale<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
     <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · 🗺️ mappa · 🎥 visuale · ⏸ pausa · parla con le persone per le missioni</p>
@@ -160,6 +162,14 @@
 </div>
 <div class="panel stack trophies" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Trofei <span class="score"></span></h2><button class="btn close">✕</button></div><div class="stack cols cups"></div></div>
+</div>
+<div class="panel stack cloud" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>☁️ Account</h2><button class="btn close">✕</button></div>
+    <p class="who hint"></p>
+    <div class="stack login"><input class="field email" type="email" placeholder="Email" autocomplete="email"><input class="field pass" type="password" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password">
+      <div class="row"><button class="btn mini signin">Accedi</button><button class="btn mini signup">Crea account</button></div></div>
+    <div class="row logged"><button class="btn mini push">Salva ora</button><button class="btn mini logout">Esci</button></div>
+    <p class="hint cloud-msg"></p></div>
 </div>
 <div class="panel stack dead" style="display: none"><h1>Sei morto!</h1><p>Tieni tutto l'inventario</p><button class="btn close">Rinasci</button></div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
@@ -2586,6 +2596,55 @@ function bake(dt) {
   }
 }
 
+const CLOUD = 'https://njkpdxszybtvjexnkrnl.supabase.co', ANON = 'sb_publishable_GwjJ-3rUTi75rcPDZHVIUQ_37QePkqA';
+const KEYS = ['blocchi', 'blocchi-save', 'blocchi-chests', 'blocchi-ovens', 'blocchi-seed', 'blocchi-time'];
+const AUTH_ERR = { invalid_credentials: 'Email o password sbagliate', user_already_exists: 'Esiste già un account con questa email: usa Accedi', weak_password: 'Password troppo corta: almeno 6 caratteri', email_address_invalid: 'Email non valida', validation_failed: 'Scrivi email e password' };
+let session = JSON.parse(localStorage.getItem('blocchi-cloud') ?? 'null');
+
+async function auth(path, body) {
+  const res = await fetch(`${CLOUD}/auth/v1/${path}`, { method: 'POST', headers: { apikey: ANON, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), d = await res.json();
+  if (!res.ok || !d.access_token) throw new Error(AUTH_ERR[d.error_code] ?? d.msg ?? d.error_description ?? 'Qualcosa è andato storto, riprova');
+  session = { access: d.access_token, refresh: d.refresh_token, user: d.user.id, email: d.user.email, until: Date.now() + d.expires_in * 1000 };
+  localStorage.setItem('blocchi-cloud', JSON.stringify(session));
+}
+
+async function rest(method, body) {
+  if (Date.now() > session.until - 60000) await auth('token?grant_type=refresh_token', { refresh_token: session.refresh });
+  const res = await fetch(`${CLOUD}/rest/v1/saves${method === 'GET' ? `?select=data,updated_at&user_id=eq.${session.user}` : ''}`, {
+    method, body: body && JSON.stringify(body), headers: { apikey: ANON, Authorization: `Bearer ${session.access}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
+  if (res.status === 401) { session = null; localStorage.removeItem('blocchi-cloud'); throw new Error('Sessione scaduta: accedi di nuovo'); }
+  if (!res.ok) throw new Error('Salvataggio online non riuscito, riprovo tra un minuto');
+  return method === 'GET' ? res.json() : null;
+}
+
+async function upload() {
+  if (!session || !saving) return;
+  save();
+  const at = new Date().toISOString();
+  await rest('POST', { user_id: session.user, data: Object.fromEntries(KEYS.map(k => [k, localStorage.getItem(k)])), updated_at: at });
+  localStorage.setItem('blocchi-synced', at);
+  drawCloud(`☁️ Salvato online alle ${new Date().toLocaleTimeString('it').slice(0, 5)}`);
+}
+
+async function sync() {
+  const [row] = await rest('GET');
+  if (row && new Date(row.updated_at).getTime() !== new Date(localStorage.getItem('blocchi-synced') ?? 0).getTime()
+    && confirm(`Hai un mondo salvato online (${new Date(row.updated_at).toLocaleString('it')}).\n\nOK = carica il mondo online\nAnnulla = tieni il mondo di questo dispositivo e salvalo online al suo posto`)) {
+    saving = false;
+    for (const k of KEYS) if (row.data[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, row.data[k]);
+    localStorage.setItem('blocchi-synced', row.updated_at);
+    return location.reload();
+  }
+  await upload();
+}
+
+function drawCloud(msg) {
+  $('.who').textContent = session ? `Collegato come ${session.email} · il mondo si salva online ogni minuto` : 'Accedi per salvare il mondo online e ritrovarlo su ogni dispositivo';
+  $('.login').style.display = session ? 'none' : '';
+  $('.logged').style.display = session ? '' : 'none';
+  if (msg) $('.cloud-msg').textContent = msg;
+}
+
 function updateMagic(dt) {
   if (patronus) updatePatronus(dt);
   if (!levi) return;
@@ -2723,7 +2782,7 @@ function drawShop() {
   $('.sell').replaceChildren(...IDS.filter(id => count(id) > 0).map(id => card(id, count(id), `🪙 ${value(id)} l'uno`, [['Vendi 1', () => sell(id, 1)], ['Vendi tutto', () => sell(id, count(id))]])));
 }
 
-const MENUS = ['craft', 'chest', 'furnace', 'cheat', 'dead', 'shop', 'spells', 'map', 'trophies'];
+const MENUS = ['craft', 'chest', 'furnace', 'cheat', 'dead', 'shop', 'spells', 'map', 'trophies', 'cloud'];
 const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
@@ -2755,6 +2814,7 @@ function openMenu(name, at = null, box = null) {
   if (name === 'shop') drawShop();
   if (name === 'map') drawMap();
   if (name === 'trophies') drawTrophies();
+  if (name === 'cloud') drawCloud();
   setPlaying(false);
   document.exitPointerLock?.();
 }
@@ -2896,6 +2956,7 @@ function loop(t) {
 }
 
 onkeydown = e => {
+  if (e.target?.tagName === 'INPUT' && e.target.type !== 'checkbox') return;
   keys[e.code] = true;
   if (/^Digit[1-9]$/.test(e.code)) choose(e.code[5] - 1);
   if (e.code === 'Pause' || e.code === 'Escape' && menu()) openMenu('pause');
@@ -2954,8 +3015,21 @@ function save() {
   localStorage.setItem('blocchi-time', Date.now());
   localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast], crops: [...crops], pets: animals.filter(a => a.pet).map(a => [a.type, a.name]) }));
 }
-document.onvisibilitychange = save;
+document.onvisibilitychange = () => { save(); upload().catch(() => {}); };
 setInterval(save, 30000);
+setInterval(() => upload().catch(e => drawCloud(e.message)), 60000);
+const enter = path => async () => {
+  try {
+    await auth(path, { email: $('.email').value.trim(), password: $('.pass').value });
+    drawCloud('Fatto! Ora il mondo si salva online da solo');
+    await sync();
+  } catch (e) { drawCloud(e.message); }
+};
+$('.signin').onclick = enter('token?grant_type=password');
+$('.signup').onclick = enter('signup');
+$('.push').onclick = () => upload().catch(e => drawCloud(e.message));
+$('.logout').onclick = () => { session = null; localStorage.removeItem('blocchi-cloud'); drawCloud('Sei uscito: il mondo resta su questo dispositivo'); };
+if (session) sync().catch(e => drawCloud(e.message));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
