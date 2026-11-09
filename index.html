@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Blocchi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
 <style>
   :root {
     --hud: #fff; --shade: #0008; --slot: #0006; --pick: #fff; --sky: #8ec5ff; --s: 44px; --pad: 60px;
@@ -14,7 +16,7 @@
     --hot-frame: #6b6b6b; --logo: #e6e6e6; --logo-shadow: #555; --splash: #ffff55; --btn: #7a7a7a; --btn-hi: #aaa; --btn-lo: #444; --btn-hover: #7a86c2;
     --left: max(12px, env(safe-area-inset-left)); --right: max(16px, env(safe-area-inset-right)); --bottom: max(12px, env(safe-area-inset-bottom));
   }
-  body { margin: 0; overflow: hidden; background: var(--sky); font: bold 16px system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  body { margin: 0; overflow: hidden; background: var(--sky); font: 500 16px 'Pixelify Sans', system-ui; color: var(--hud); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   canvas { display: block; }
   .cross { position: fixed; left: 50%; top: 50%; translate: -50% -50%; font-size: 26px; pointer-events: none; mix-blend-mode: difference; }
   .hearts { font-size: 18px; letter-spacing: 1px; }
@@ -52,6 +54,14 @@
   .slot:empty::before { content: ''; display: block; width: var(--s); height: var(--s); }
   .slot { padding: 3px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo), inset -2px -2px var(--gui-hi); }
   .all:empty { display: none; }
+  .grid3 { width: calc(3 * (var(--s) + 10px)); }
+  .slot.off { opacity: 0.4; }
+  .out .slot { padding: 8px; }
+  .arrow { font-size: 30px; color: var(--gui-lo); }
+  .carried { position: fixed; --s: 32px; translate: -50% -50%; pointer-events: none; z-index: 9; }
+  .progress { width: 48px; height: 12px; background: var(--gui-slot); box-shadow: inset 2px 2px var(--gui-lo); }
+  .progress i { display: block; width: 0; height: 100%; background: var(--hud); }
+  .hint { max-width: 22rem; font-size: 13px; }
   .slot.on { outline: 3px solid var(--pick); outline-offset: -3px; }
   .logo { margin: 0; font-size: clamp(44px, 13vh, 104px); letter-spacing: 6px; color: var(--logo); text-shadow: 4px 4px 0 var(--logo-shadow), 8px 8px 0 var(--edge); }
   .splash { margin: -12px 0 12px; color: var(--splash); text-shadow: 2px 2px var(--logo-shadow); rotate: -8deg; translate: 110px 0; animation: pulse 0.6s ease-in-out alternate infinite; }
@@ -104,20 +114,30 @@
   <button class="mcbtn" data-menu="trophies">Trofei</button>
   <button class="mcbtn music">Musica: sì</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
-    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei · V visuale<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
+    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · E inventario: click prendi/posa, click destro metà, Shift+click sposta · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei · V visuale<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
     <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · 🗺️ mappa · 🎥 visuale · ⏸ pausa · parla con le persone per le missioni</p>
   </details>
   <button class="mcbtn fresh">Nuovo mondo</button>
 </div>
 <div class="panel stack craft" style="display: none">
-  <div class="gui stack"><div class="row head"><h2>Inventario</h2><button class="btn close">✕</button></div>
-    <p>Clicca un oggetto nello zaino per prenderlo in mano · clicca un oggetto nella barra per rimetterlo nello zaino</p>
-    <div class="row grid9 store"></div><div class="row grid9 hot"></div><div class="row all"></div>
-    <h2 class="craft-title">Crafting</h2><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
+  <div class="row">
+    <div class="gui stack"><div class="row head"><h2 class="craft-title">Crafting</h2><button class="btn close">✕</button></div>
+      <div class="row"><div class="row grid3 table"></div><span class="arrow">➜</span><div class="out"></div><button class="btn mini make">Crafta tutto</button></div>
+      <div class="row grid9 store"></div><div class="row grid9 hot"></div><div class="row grid9 all"></div></div>
+    <div class="gui stack"><h3>📖 Ricette</h3><label class="row"><input type="checkbox" class="can"> Solo possibili</label><div class="row grid9 recipes"></div>
+      <p class="hint">Clicca una ricetta per riempire la griglia (Shift: il massimo) · clicca il risultato per craftare · click destro: metà pila o un oggetto · Shift+click: sposta veloce</p></div>
+  </div>
 </div>
 <div class="panel stack chest" style="display: none">
-  <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 pack"></div></div>
+  <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 store"></div><div class="row grid9 hot"></div></div>
 </div>
+<div class="panel stack furnace" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Fornace</h2><button class="btn close">✕</button></div>
+    <div class="row"><div class="stack"><div class="ov-in"></div><span class="flame">🔥</span><div class="ov-fuel"></div></div><div class="progress"><i></i></div><div class="out ov-out"></div></div>
+    <p class="hint">In alto cosa cuocere, in basso il combustibile: carbone (8 cotture), legna, assi o bastoni</p>
+    <h3>Inventario</h3><div class="row grid9 store"></div><div class="row grid9 hot"></div></div>
+</div>
+<div class="icon carried" style="display: none"></div>
 <div class="panel stack cheat" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Trucchi</h2><button class="btn close">✕</button></div>
     <label class="row"><input type="checkbox" class="xray"> Vista a raggi X: solo minerali e bauli</label>
@@ -1157,7 +1177,8 @@ let caught = saved?.caught ?? 0, snitch = null, coins = saved?.coins ?? 0, shopp
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
-let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0, station = null, bob = null, view = 0;
+let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0, station = null, bob = null, view = 0, carried = null, container = null, ovenAt = '', bakeT = 0, saving = true;
+const grid = Array(9).fill(null), ovens = JSON.parse(localStorage.getItem('blocchi-ovens') ?? '{}');
 let weather = 'clear', weatherT = 90, gloom = 0, flash = 0, rainGain = null, musicT = 20, music = localStorage.getItem('blocchi-music') !== 'off';
 const effects = {}, effect = k => effects[k] > clock, crops = new Set(saved?.crops);
 let quest = saved?.quest ?? null, done = saved?.done ?? 0, tipAt = saved?.tip ?? 0;
@@ -1295,11 +1316,15 @@ function raycast(fluids = false, reach = REACH) {
 
 const tier = type => (TOOLS[type]?.indexOf(heldId()) ?? -1) + 1;
 
+function fit(arr, id, n, a = 0, b = arr.length) {
+  for (let i = a; i < b && n; i++) if (arr[i]?.id === id && arr[i].n < MAX(id)) { const k = Math.min(n, MAX(id) - arr[i].n); arr[i].n += k; n -= k; }
+  for (let i = a; i < b && n; i++) if (!arr[i]) { const k = Math.min(n, MAX(id)); arr[i] = { id, n: k }; n -= k; }
+  return n;
+}
+
 function give(id, n) {
   if (FIRST[id]) award(FIRST[id]);
-  for (const s of slots) if (n && s?.id === id && s.n < MAX(id)) { const k = Math.min(n, MAX(id) - s.n); s.n += k; n -= k; }
-  for (let i = 0; i < 36 && n; i++) if (!slots[i]) { const k = Math.min(n, MAX(id)); slots[i] = { id, n: k }; n -= k; }
-  return n;
+  return fit(slots, id, n);
 }
 
 function take(id, n) {
@@ -1452,8 +1477,9 @@ function dig([x, y, z]) {
   if (id !== CHEST) history.push(isDoor(id) ? [[x, y, z, id], [x, other, z, get(x, other, z)]] : [[x, y, z, id]]);
   if (isDoor(id)) locks.delete(doorKey([x, y, z]));
   if (isDoor(id) && isDoor(get(x, other, z))) set(x, other, z, AIR);
+  if (id === FURNACE) { for (const st of ovens[key]?.s ?? []) if (st) drop(st.id, st.n, x + 0.5, y + 0.5, z + 0.5); delete ovens[key]; }
   if (id === CHEST) {
-    for (const [k, n] of Object.entries(chests[key] ?? loot([x, y, z]))) if (n > 0) drop(+k, n, x + 0.5, y + 0.5, z + 0.5);
+    for (const st of asSlots(chests[key] ?? loot([x, y, z]))) if (st) drop(st.id, st.n, x + 0.5, y + 0.5, z + 0.5);
     delete chests[key];
     saveChests();
   }
@@ -2175,11 +2201,10 @@ function drawMarks(g, px, pz) {
 
 const MEATS = [PORK, PORK_C, BEEF, BEEF_C, CHICKEN, CHICKEN_C, MUTTON, MUTTON_C], EFFECT_ICON = { speed: '💨', jump: '🐇', breath: '🫧', night: '🌙', luck: '🍀' };
 const useUp = () => { if (!is('infinite') && !--slots[sel].n) slots[sel] = null; swing ||= 0.01; drawInv(); };
-const nearby = id => { const [px, py, pz] = player.pos.toArray().map(Math.floor); for (let x = -4; x <= 4; x++) for (let y = -2; y <= 3; y++) for (let z = -4; z <= 4; z++) if (get(px + x, py + y, pz + z) === id) return true; return false; };
 
 function use(id, r, t) {
   const hit = r && get(...r.hit);
-  if (STATIONS.includes(hit)) return openMenu('craft', hit) ?? true;
+  if (STATIONS.includes(hit)) return (hit === FURNACE ? openFurnace(r.hit) : openMenu('craft', hit)) ?? true;
   if (t?.type === 'dog') return befriend(t, id) ?? true;
   if (id === HOE && r) return till(r) ?? true;
   if (SOWS[id] && hit === FARMLAND && r.prev?.[1] === r.hit[1] + 1 && !get(...r.prev)) return sow(r.prev, SOWS[id]) ?? true;
@@ -2430,6 +2455,137 @@ function ambience(dt) {
   else for (let i = 0; i < 3; i++) note(4400, i * 0.08, 0.05, 0.01, 'square');
 }
 
+const PLANKS_ALL = [PLANKS, BIRCH_PLANKS, SPRUCE_PLANKS, JUNGLE_PLANKS, CHERRY_PLANKS, ACACIA_PLANKS];
+const FUEL = { [COAL]: 8, [COAL_BLOCK]: 72, [STICK]: 0.5, ...Object.fromEntries([...LOGS.map(id => [id, 1.5]), ...PLANKS_ALL.map(id => [id, 1])]) };
+const SMELT = Object.fromEntries(RECIPES.filter(rc => rc[3] === FURNACE).map(([need, out]) => [Object.keys(need).find(id => +id !== COAL), out]));
+const book = () => RECIPES.filter(rc => station === CAULDRON ? rc[3] === CAULDRON : !rc[3]);
+const can = ([need]) => is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k);
+const spill = st => { const n = give(st.id, st.n); if (n) drop(st.id, n, player.pos.x, player.pos.y + 1, player.pos.z); };
+
+function cells(arr, el, a = 0, b = arr.length) {
+  el.replaceChildren(...arr.slice(a, b).map((st, k) => {
+    const i = a + k, d = st ? slot(st.id, st.n > 1 ? st.n : '') : Object.assign(document.createElement('div'), { className: 'slot' });
+    d.classList.toggle('on', arr === slots && i === sel);
+    d.onclick = e => act(arr, i, false, e.shiftKey);
+    d.oncontextmenu = e => { e.preventDefault(); act(arr, i, true, e.shiftKey); };
+    return d;
+  }));
+}
+
+function act(arr, i, right, shift) {
+  if (shift) quick(arr, i); else clickSlot(arr, i, right);
+  redraw();
+}
+
+function clickSlot(arr, i, right) {
+  const st = arr[i];
+  if (arr === ovens[ovenAt]?.s && i === 2) {
+    if (st && (!carried || carried.id === st.id && carried.n + st.n <= MAX(st.id))) { carried = { id: st.id, n: (carried?.n ?? 0) + st.n }; arr[i] = null; }
+    return;
+  }
+  if (!carried) {
+    if (!st) return;
+    const k = right ? Math.ceil(st.n / 2) : st.n;
+    carried = { id: st.id, n: k };
+    if (!(st.n -= k)) arr[i] = null;
+    return;
+  }
+  if (st && st.id !== carried.id) return void ([arr[i], carried] = [carried, st]);
+  const k = Math.min(right ? 1 : carried.n, MAX(carried.id) - (st?.n ?? 0));
+  arr[i] = { id: carried.id, n: (st?.n ?? 0) + k };
+  if (!(carried.n -= k)) carried = null;
+}
+
+function quick(arr, i) {
+  const st = arr[i];
+  if (!st) return;
+  arr[i] = null;
+  const oven = container && container === ovens[ovenAt]?.s;
+  const n = arr !== slots ? fit(slots, st.id, st.n) : oven ? (SMELT[st.id] ? fit(container, st.id, st.n, 0, 1) : FUEL[st.id] ? fit(container, st.id, st.n, 1, 2) : st.n)
+    : container ? fit(container, st.id, st.n) : i < 9 ? fit(slots, st.id, st.n, 9, 36) : fit(slots, st.id, st.n, 0, 9);
+  if (n) arr[i] = { id: st.id, n };
+}
+
+function redraw() {
+  const m = menu();
+  drawInv();
+  if (m === 'craft') drawCraft();
+  if (m === 'chest') { cells(container, $('.box')); saveChests(); }
+  if (m === 'furnace') drawFurnace();
+  drawCarried();
+}
+
+function drawCarried() {
+  const c = $('.carried');
+  c.style.display = carried ? '' : 'none';
+  if (!carried) return;
+  c.style.setProperty('--t', ICON[carried.id]);
+  c.textContent = carried.n > 1 ? carried.n : '';
+}
+
+function stow() {
+  grid.forEach((st, i) => { if (st) { grid[i] = null; spill(st); } });
+  if (carried) spill(carried);
+  carried = null;
+  drawCarried();
+}
+
+function matchGrid() {
+  const have = {};
+  for (const st of grid) if (st) have[st.id] = (have[st.id] ?? 0) + 1;
+  return book().find(([need]) => Object.keys(need).length === Object.keys(have).length && Object.entries(need).every(([id, k]) => have[id] === k));
+}
+
+function takeResult(all) {
+  for (let rc = matchGrid(); rc; rc = all ? matchGrid() : null) {
+    const [, out, n] = rc;
+    if (all ? fit(slots.map(st => st && { ...st }), out, n) : carried && (carried.id !== out || carried.n + n > MAX(out))) return;
+    if (all) give(out, n);
+    else { carried = { id: out, n: (carried?.n ?? 0) + n }; if (FIRST[out]) award(FIRST[out]); }
+    grid.forEach((st, i) => { if (st && !--st.n) grid[i] = null; });
+    sound(1800, 0.15, 0.08);
+  }
+}
+
+function fillGrid([need], all) {
+  grid.forEach((st, i) => { if (st) { grid[i] = null; spill(st); } });
+  const sets = is('infinite') ? (all ? 64 : 1) : Math.min(all ? 64 : 1, ...Object.entries(need).map(([id, k]) => Math.floor(count(+id) / k)));
+  if (!sets) return;
+  let i = 0;
+  for (const [id, k] of Object.entries(need)) for (let j = 0; j < k; j++) grid[i++] = { id: +id, n: sets };
+  if (!is('infinite')) for (const [id, k] of Object.entries(need)) take(+id, k * sets);
+}
+
+function openFurnace(hit) {
+  ovenAt = hit.join();
+  ovens[ovenAt] ??= { s: [null, null, null], burn: 0, cook: 0 };
+  openMenu('furnace', null, ovens[ovenAt].s);
+}
+
+function drawFurnace() {
+  const o = ovens[ovenAt];
+  cells(o.s, $('.ov-in'), 0, 1);
+  cells(o.s, $('.ov-fuel'), 1, 2);
+  cells(o.s, $('.ov-out'), 2, 3);
+  $('.flame').style.opacity = o.burn > 0 ? 1 : 0.25;
+  $('.progress i').style.width = `${o.cook * 100}%`;
+}
+
+function bake(dt) {
+  for (const o of Object.values(ovens)) {
+    const [inp, fuel, out] = o.s, to = inp && SMELT[inp.id];
+    if (!to || out && (out.id !== to || out.n >= MAX(to))) { o.cook = 0; continue; }
+    if (o.burn <= 0 && FUEL[fuel?.id]) { o.burn += FUEL[fuel.id]; if (!--fuel.n) o.s[1] = null; }
+    if (o.burn <= 0) { o.cook = 0; continue; }
+    if ((o.cook += dt / 1.5) < 1) continue;
+    o.cook = 0;
+    o.burn--;
+    if (!--inp.n) o.s[0] = null;
+    o.s[2] = { id: to, n: (out?.n ?? 0) + 1 };
+    if (FIRST[to]) award(FIRST[to]);
+  }
+}
+
 function updateMagic(dt) {
   if (patronus) updatePatronus(dt);
   if (!levi) return;
@@ -2508,27 +2664,6 @@ function choose(i) {
   drawInv();
 }
 
-function toStore(i) {
-  const s = slots[i], free = () => slots.indexOf(null, 9);
-  slots[i] = null;
-  for (let j = 9; j < 36 && s.n; j++) if (slots[j]?.id === s.id && slots[j].n < MAX(s.id)) { const k = Math.min(s.n, MAX(s.id) - slots[j].n); slots[j].n += k; s.n -= k; }
-  if (s.n) slots[free() >= 0 ? free() : i] = s;
-}
-
-function quickMove(i) {
-  if (i < 9 && !slots[i]) sel = i;
-  else if (i < 9) toStore(i);
-  else if (slots[i]) [slots[sel], slots[i]] = [slots[i], slots[sel]];
-  drawInv();
-}
-
-function slotEl(i, click) {
-  const s = slots[i], d = s ? slot(s.id, s.n > 1 ? s.n : '') : Object.assign(document.createElement('div'), { className: 'slot' });
-  d.classList.toggle('on', i === sel && click === quickMove);
-  d.onclick = () => click(i);
-  return d;
-}
-
 function drawInv() {
   $('.bar').replaceChildren(...slots.slice(0, 9).map((s, i) => {
     const d = s ? icon(s.id, s.n > 1 ? s.n : '') : Object.assign(document.createElement('div'), { className: 'icon' });
@@ -2536,36 +2671,31 @@ function drawInv() {
     d.onclick = () => choose(i);
     return d;
   }));
-  $('.store').replaceChildren(...slots.slice(9).map((_, i) => slotEl(i + 9, quickMove)));
-  $('.hot').replaceChildren(...slots.slice(0, 9).map((_, i) => slotEl(i, quickMove)));
-  $('.all').replaceChildren(...(is('infinite') ? ITEMS : []).map(id => {
+  const m = menu();
+  if (!['craft', 'chest', 'furnace'].includes(m)) return;
+  cells(slots, $(`.${m} .store`), 9, 36);
+  cells(slots, $(`.${m} .hot`), 0, 9);
+  if (m === 'craft') $('.all').replaceChildren(...(is('infinite') ? ITEMS : []).map(id => {
     const d = slot(id, '');
-    d.onclick = () => { slots[sel] = { id, n: MAX(id) }; drawInv(); };
+    d.onclick = () => { carried = carried ? null : { id, n: MAX(id) }; drawCarried(); };
     return d;
   }));
 }
 
 function drawCraft() {
-  const here = STATIONS.filter(nearby), can = ([need, , , at]) => (is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k)) && (!at || at === station || here.includes(at));
+  const r = matchGrid();
   $('.craft-title').textContent = station ? NAMES[station] : 'Crafting';
-  $('.recipes').replaceChildren(...RECIPES.filter(r => (!station || r[3] === station) && (!$('.can').checked || can(r))).map(([need, out, n, at]) => {
-    const b = document.createElement('button'), row = document.createElement('div');
-    b.className = 'recipe';
-    row.className = 'row';
-    row.append(...Object.entries(need).map(([id, k]) => slot(id, k)), '→', slot(out, n));
-    b.append(row, NAMES[out] + (at ? ` · ${at === FURNACE ? '🔥' : '⚗️'} serve ${NAMES[at].toLowerCase()} vicino` : ''));
-    b.disabled = !can([need, , , at]) || TOOL_IDS.includes(out) && count(out) > 0;
-    b.onclick = () => craft(need, out, n);
-    return b;
+  cells(grid, $('.table'));
+  const o = r ? slot(r[1], r[2] > 1 ? r[2] : '') : Object.assign(document.createElement('div'), { className: 'slot' });
+  o.onclick = e => { takeResult(e.shiftKey); redraw(); };
+  $('.craft .out').replaceChildren(o);
+  $('.recipes').replaceChildren(...book().filter(rc => !$('.can').checked || can(rc)).map(rc => {
+    const d = slot(rc[1], rc[2] > 1 ? rc[2] : '');
+    d.classList.toggle('off', !can(rc));
+    d.firstChild.title = `${NAMES[rc[1]]} ← ${Object.entries(rc[0]).map(([id, k]) => `${NAMES[id]} ×${k}`).join(' + ')}`;
+    d.onclick = e => { fillGrid(rc, e.shiftKey); redraw(); };
+    return d;
   }));
-}
-
-function craft(need, out, n) {
-  if (!is('infinite')) for (const [id, k] of Object.entries(need)) take(+id, k);
-  const left = give(out, n);
-  if (left) drop(out, left, player.pos.x, player.pos.y + 1, player.pos.z);
-  drawInv();
-  drawCraft();
 }
 
 function openShop(t) {
@@ -2593,7 +2723,7 @@ function drawShop() {
   $('.sell').replaceChildren(...IDS.filter(id => count(id) > 0).map(id => card(id, count(id), `🪙 ${value(id)} l'uno`, [['Vendi 1', () => sell(id, 1)], ['Vendi tutto', () => sell(id, count(id))]])));
 }
 
-const MENUS = ['craft', 'chest', 'cheat', 'dead', 'shop', 'spells', 'map', 'trophies'];
+const MENUS = ['craft', 'chest', 'furnace', 'cheat', 'dead', 'shop', 'spells', 'map', 'trophies'];
 const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
@@ -2615,14 +2745,14 @@ function start() {
   setPlaying(true);
 }
 
-function openMenu(name, at = null) {
+function openMenu(name, at = null, box = null) {
+  stow();
   station = at;
+  container = box;
   for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
   if (!name) return start();
-  drawInv();
-  if (name === 'craft') drawCraft();
+  redraw();
   if (name === 'shop') drawShop();
-  if (name === 'chest') drawChest();
   if (name === 'map') drawMap();
   if (name === 'trophies') drawTrophies();
   setPlaying(false);
@@ -2639,20 +2769,13 @@ function loot([x, y, z]) {
   return { [COAL]: 2 + (k(1) * 7 | 0), [TORCH]: 2 + (k(2) * 5 | 0), [IRON_ORE]: 1 + (k(3) * 3 | 0), [IRON]: k(4) < 0.4 ? 1 + (k(5) * 3 | 0) : 0, [GOLD]: k(6) < 0.3 ? 1 + (k(7) * 3 | 0) : 0, [DIAMOND]: k(8) < 0.15 ? 1 + (k(9) * 2 | 0) : 0 };
 }
 
+const asSlots = box => Array.isArray(box) ? box : Object.entries(box).reduce((a, [id, n]) => (n > 0 && fit(a, +id, n), a), Array(27).fill(null));
+
 function openChest(hit) {
   chestAt = hit.join();
   if (!chests[chestAt] && treasure(hit[0], hit[2])) award('treasure');
-  chests[chestAt] ??= loot(hit);
-  openMenu('chest');
-}
-
-function drawChest() {
-  const box = chests[chestAt], items = Object.entries(box).filter(([, n]) => n > 0), done = () => { saveChests(); drawInv(); drawChest(); };
-  const out = ([id, n]) => { const c = slot(id, n); c.onclick = () => { box[id] = give(+id, n); done(); }; return c; };
-  const stash = i => { box[slots[i].id] = (box[slots[i].id] ?? 0) + slots[i].n; slots[i] = null; done(); };
-  const empty = Array.from({ length: Math.max(0, 27 - items.length) }, () => Object.assign(document.createElement('div'), { className: 'slot' }));
-  $('.box').replaceChildren(...items.map(out), ...empty);
-  $('.pack').replaceChildren(...slots.map((s, i) => slotEl(i, () => s && stash(i))));
+  chests[chestAt] = asSlots(chests[chestAt] ?? loot(hit));
+  openMenu('chest', null, chests[chestAt]);
 }
 
 function sky(dt) {
@@ -2719,7 +2842,9 @@ function spawn() {
 
 let last = performance.now(), drawn = 0;
 function loop(t) {
-  const p = player, dt = playing ? Math.min(0.05, (t - last) / 1000) : 0;
+  const p = player, step = Math.min(0.05, (t - last) / 1000), dt = playing ? step : 0;
+  bake(step);
+  if ((bakeT += step) > 0.25) { bakeT = 0; if (menu() === 'furnace') drawFurnace(); }
   last = t;
   if (dt) update(dt);
   if ((flowT += dt) > 0.25) { flowT = 0; flowTick(); }
@@ -2823,20 +2948,29 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast], crops: [...crops], pets: animals.filter(a => a.pet).map(a => [a.type, a.name]) }));
+function save() {
+  if (!saving) return;
+  localStorage.setItem('blocchi-ovens', JSON.stringify(ovens));
+  localStorage.setItem('blocchi-time', Date.now());
+  localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast], crops: [...crops], pets: animals.filter(a => a.pet).map(a => [a.type, a.name]) }));
+}
+document.onvisibilitychange = save;
+setInterval(save, 30000);
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
 $('.fresh').onclick = () => {
   if (!confirm('Cancellare questo mondo e crearne uno nuovo?')) return;
-  for (const k of ['blocchi', 'blocchi-save', 'blocchi-chests']) localStorage.removeItem(k);
+  saving = false;
+  for (const k of ['blocchi', 'blocchi-save', 'blocchi-chests', 'blocchi-ovens', 'blocchi-time']) localStorage.removeItem(k);
   localStorage.setItem('blocchi-seed', Math.random() * 1e9 | 0);
-  document.onvisibilitychange = null;
   location.reload();
 };
 for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
 $('.instant').onchange = e => cheat.instant = e.target.checked;
 $('.can').onchange = drawCraft;
+$('.make').onclick = () => { takeResult(true); redraw(); };
+for (const ev of ['pointermove', 'pointerdown']) addEventListener(ev, e => Object.assign($('.carried').style, { left: e.clientX + 'px', top: e.clientY + 'px' }));
 $('.music').textContent = `Musica: ${music ? 'sì' : 'no'}`;
 $('.music').onclick = e => { music = !music; localStorage.setItem('blocchi-music', music ? 'on' : 'off'); e.target.textContent = `Musica: ${music ? 'sì' : 'no'}`; };
 $('.spell').onkeydown = e => {
