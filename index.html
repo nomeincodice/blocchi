@@ -926,8 +926,8 @@ material.onBeforeCompile = waterMat.onBeforeCompile = shader => {
     THREE.ShaderChunk.lights_fragment_begin.replace('getAmbientLightIrradiance( ambientLightColor )', 'getAmbientLightIrradiance( ambientLightColor ) * vSky'));
 };
 const torchMat = new THREE.MeshBasicMaterial({ map: tex });
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer();
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 document.body.prepend(renderer.domElement);
 const canvas = renderer.domElement;
@@ -2155,7 +2155,7 @@ function spawn() {
   player.pos.set(x + 0.5, y, 8.5);
 }
 
-let last = performance.now();
+let last = performance.now(), drawn = 0;
 function loop(t) {
   const p = player, dt = playing ? Math.min(0.05, (t - last) / 1000) : 0;
   last = t;
@@ -2195,7 +2195,7 @@ function loop(t) {
   handLight.intensity = heldId() === TORCH || GLOW.includes(heldId()) || tip.visible ? 5 : 0;
   handLight.color.set(tip.visible ? '#dfe9ff' : '#ffb060');
   handLight.position.copy(camera.position);
-  renderer.render(scene, camera);
+  if (playing || t - drawn > 250) { drawn = t; renderer.render(scene, camera); }
   requestAnimationFrame(loop);
 }
 
