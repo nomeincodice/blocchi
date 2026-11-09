@@ -2903,9 +2903,9 @@ function spawn() {
 
 let last = performance.now(), drawn = 0;
 function loop(t) {
-  const p = player, step = Math.min(0.05, (t - last) / 1000), dt = playing ? step : 0;
-  bake(step);
-  if ((bakeT += step) > 0.25) { bakeT = 0; if (menu() === 'furnace') drawFurnace(); }
+  const p = player, real = Math.min(0.05, (t - last) / 1000), dt = playing ? real : 0;
+  bake(real);
+  if ((bakeT += real) > 0.25) { bakeT = 0; if (menu() === 'furnace') drawFurnace(); }
   last = t;
   if (dt) update(dt);
   if ((flowT += dt) > 0.25) { flowT = 0; flowTick(); }
