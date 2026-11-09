@@ -65,14 +65,14 @@
   .recipe:disabled { opacity: 0.45; cursor: default; }
   .start { backdrop-filter: blur(4px); }
   .rotate { display: none; }
-  .pad { position: fixed; right: var(--right); bottom: var(--bottom); display: grid; grid-template-columns: repeat(2, var(--pad)); gap: 10px; }
+  .pad { position: fixed; right: var(--right); bottom: var(--bottom); display: grid; grid-template-columns: repeat(3, var(--pad)); gap: 10px; }
   .pad button { height: var(--pad); padding: 0; font-size: calc(var(--pad) * 0.42); border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
   .corner { position: fixed; top: max(10px, env(safe-area-inset-top)); right: var(--right); width: 44px; height: 44px; padding: 0; font-size: 20px; border-radius: 50%; background: var(--slot); border: 2px solid var(--pick); }
   .joy { position: fixed; width: 100px; height: 100px; translate: -50% -50%; border: 2px solid var(--pick); border-radius: 50%; pointer-events: none; }
   @media (pointer: coarse) {
     :root { --s: 34px; }
     .mouse { display: none; }
-    .bar { left: var(--left); translate: none; max-width: calc(100vw - var(--left) - var(--right) - 2 * var(--pad) - 30px); }
+    .bar { left: var(--left); translate: none; max-width: calc(100vw - var(--left) - var(--right) - 3 * var(--pad) - 40px); }
     .hud { font-size: 13px; }
   }
   @media (pointer: coarse) and (max-height: 420px) { :root { --pad: 52px; --s: 30px; } }
@@ -88,11 +88,9 @@
 <input class="spell" placeholder="Scrivi un incantesimo · Tab completa · Invio lancia" autocomplete="off" spellcheck="false" style="display: none">
 <div class="joy" style="display: none"></div>
 <div class="pad touch">
-  <button data-key="KeyE">🛠️</button><button data-key="KeyF">🕊️</button>
-  <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
-  <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
-  <button data-menu="spells">🪄</button><button data-menu="map">🗺️</button>
-  <button data-key="KeyV">🎥</button>
+  <button data-menu="spells">🪄</button><button data-menu="map">🗺️</button><button data-key="KeyV">🎥</button>
+  <button data-key="KeyE">🛠️</button><button data-key="KeyF">🕊️</button><button data-key="Space">⬆️</button>
+  <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button><button data-key="ShiftLeft">⬇️</button>
 </div>
 <button class="corner touch" data-key="Pause">⏸</button>
 <div class="panel stack start">
@@ -1286,6 +1284,7 @@ function raycast(fluids = false, reach = REACH) {
   let prev = null;
   for (let t = 0; t <= reach;) {
     const id = get(...b);
+    if (fluids && solid(id)) return;
     if (id && (fluids ? id === WATER || id === LAVA : !FLUID.includes(id))) return { hit: b, prev };
     prev = [...b];
     const i = tMax.indexOf(Math.min(...tMax));
@@ -2244,6 +2243,7 @@ function reel() {
   toast(hooked ? `🎣 Hai pescato: ${NAMES[id]}!` : '🎣 Niente... tira su quando il galleggiante va sotto');
   scene.remove(bob.mesh, bob.line);
   bob.mesh.geometry.dispose();
+  bob.mesh.material.dispose();
   bob.line.geometry.dispose();
   bob = null;
   swing ||= 0.01;
@@ -2359,7 +2359,7 @@ function updateWeather(dt) {
   snowFx.visible = weather !== 'clear' && !dry && cold && !roof;
   if (rainFx.visible || snowFx.visible) fall(rainFx.visible ? rainFx : snowFx, dt, rainFx.visible);
   if (weather === 'storm' && !dry && rnd() < dt * 0.12) { flash = 0.3; setTimeout(() => sound(70, 0.9, 1.6), 400 + rnd() * 1500); }
-  if (weather === 'storm' && !roof && dt) award('storm');
+  if (weather === 'storm' && !dry && !roof && dt) award('storm');
   flash = Math.max(0, flash - dt);
   rainVolume(rainFx.visible ? (weather === 'storm' ? 0.25 : 0.15) : 0);
 }
@@ -2544,7 +2544,7 @@ function drawInv() {
 }
 
 function drawCraft() {
-  const here = STATIONS.filter(nearby), can = ([need, , , at]) => (is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k)) && (!at || here.includes(at));
+  const here = STATIONS.filter(nearby), can = ([need, , , at]) => (is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k)) && (!at || at === station || here.includes(at));
   $('.craft-title').textContent = station ? NAMES[station] : 'Crafting';
   $('.recipes').replaceChildren(...RECIPES.filter(r => (!station || r[3] === station) && (!$('.can').checked || can(r))).map(([need, out, n, at]) => {
     const b = document.createElement('button'), row = document.createElement('div');
@@ -2602,6 +2602,10 @@ function setPlaying(on) {
 }
 
 function start() {
+  if (hp <= 0) {
+    hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity; player.riding = null; player.broom = broom.visible = false;
+    if (bed && get(...bed) === BED) player.pos.set(bed[0] + 0.5, bed[1] + 1, bed[2] + 0.5); else spawn();
+  }
   audio ??= new AudioContext();
   audio.resume();
   if (!touch) return document.body.requestPointerLock();
@@ -2612,10 +2616,6 @@ function start() {
 function openMenu(name, at = null) {
   station = at;
   for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
-  if (!name && hp <= 0) {
-    hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity;
-    if (bed && get(...bed) === BED) player.pos.set(bed[0] + 0.5, bed[1] + 1, bed[2] + 0.5); else spawn();
-  }
   if (!name) return start();
   drawInv();
   if (name === 'craft') drawCraft();
@@ -2705,7 +2705,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins} · 🧭 ${bed ? 'letto' : 'inizio'} ${compass(...(bed ?? [8, 0, 8]))}${Object.entries(effects).filter(([, t]) => t > clock).map(([k, t]) => ` · ${EFFECT_ICON[k]} ${Math.ceil(t - clock)}s`).join('')}${quest ? ` · 📜 ${NAMES[quest.id]} ${Math.min(count(quest.id), quest.n)}/${quest.n}` : ''}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins} · 🧭 ${bed ? 'letto' : 'inizio'} ${compass(bed?.[0] ?? 8, bed?.[2] ?? 8)}${Object.entries(effects).filter(([, t]) => t > clock).map(([k, t]) => ` · ${EFFECT_ICON[k]} ${Math.ceil(t - clock)}s`).join('')}${quest ? ` · 📜 ${NAMES[quest.id]} ${Math.min(count(quest.id), quest.n)}/${quest.n}` : ''}${need}`;
 }
 
 function spawn() {
