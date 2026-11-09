@@ -26,6 +26,10 @@
   .spell { position: fixed; left: 50%; bottom: calc(var(--bottom) + var(--s) + 24px); translate: -50% 0; width: min(28rem, 80vw); padding: 8px 12px; font: inherit; color: var(--hud); background: var(--shade); border: 2px solid var(--mana); outline: none; }
   .hurt { position: fixed; inset: 0; background: var(--heart); opacity: 0; pointer-events: none; }
   .fade { position: fixed; inset: 0; background: var(--edge); opacity: 0; pointer-events: none; }
+  .award { top: 12%; color: var(--splash); }
+  .tip { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; max-width: min(30rem, 56vw); padding: 6px 12px; text-align: center; background: var(--shade); pointer-events: none; }
+  .tip:empty { display: none; }
+  .chart { width: min(320px, 62vh, 80vw); image-rendering: pixelated; border: 3px solid var(--edge); }
   .toast { position: fixed; top: 22%; left: 50%; translate: -50% 0; text-align: center; text-shadow: 0 2px 3px var(--edge); opacity: 0; pointer-events: none; }
   .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: var(--left); justify-items: start; text-shadow: 0 2px 3px var(--edge); pointer-events: none; }
   .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; }
@@ -78,7 +82,7 @@
 </head>
 <body>
 <div class="cross">+</div>
-<div class="hurt"></div><div class="fade"></div><div class="toast"></div>
+<div class="hurt"></div><div class="fade"></div><div class="toast"></div><div class="toast award"></div><div class="tip"></div>
 <div class="hud stack"><div class="info"></div><div class="hearts"><span class="full"></span><span class="half"></span><span class="empty"></span> <span class="air"></span></div><div class="hearts mana"><span class="star"></span><span class="empty"></span></div></div>
 <div class="bar"></div>
 <input class="spell" placeholder="Scrivi un incantesimo · Tab completa · Invio lancia" autocomplete="off" spellcheck="false" style="display: none">
@@ -87,7 +91,7 @@
   <button data-key="KeyE">🛠️</button><button data-key="KeyF">🕊️</button>
   <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
   <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
-  <button data-menu="spells">🪄</button>
+  <button data-menu="spells">🪄</button><button data-menu="map">🗺️</button>
 </div>
 <button class="corner touch" data-key="Pause">⏸</button>
 <div class="panel stack start">
@@ -97,9 +101,11 @@
   <button class="mcbtn mode">Modalità: Sopravvivenza</button>
   <button class="mcbtn" data-menu="cheat">Trucchi</button>
   <button class="mcbtn" data-menu="spells">Incantesimi</button>
+  <button class="mcbtn" data-menu="map">Mappa</button>
+  <button class="mcbtn" data-menu="trophies">Trofei</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
-    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
-    <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · ⏸ pausa</p>
+    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
+    <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · 🗺️ mappa · ⏸ pausa · parla con le persone per le missioni</p>
   </details>
   <button class="mcbtn fresh">Nuovo mondo</button>
 </div>
@@ -127,6 +133,13 @@
 <div class="panel stack spells" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Incantesimi</h2><button class="btn close">✕</button></div>
     <p>Prendi in mano la bacchetta (bastone + piuma), premi T e scrivi l'incantesimo · oppure toccalo qui</p><div class="stack cols book"></div></div>
+</div>
+<div class="panel stack map" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Mappa</h2><button class="btn close">✕</button></div>
+    <canvas class="chart" width="320" height="320"></canvas><p class="far"></p></div>
+</div>
+<div class="panel stack trophies" style="display: none">
+  <div class="gui stack"><div class="row head"><h2>Trofei <span class="score"></span></h2><button class="btn close">✕</button></div><div class="stack cols cups"></div></div>
 </div>
 <div class="panel stack dead" style="display: none"><h1>Sei morto!</h1><p>Tieni tutto l'inventario</p><button class="btn close">Rinasci</button></div>
 <div class="panel stack rotate"><h1>📱↻</h1><p>Gira il telefono in orizzontale</p></div>
@@ -159,7 +172,7 @@ const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 
 const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
 const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
 const CHERRY_LOG = 143, CHERRY_LEAVES = 144, CHERRY_PLANKS = 145, RED_SAND = 146, ORANGE_TC = 147, YELLOW_TC = 148, WHITE_TC = 149, BROWN_TC = 150;
-const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162, SNITCH = 163;
+const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162, SNITCH = 163, SLATE = 164;
 const BANDS = [ORANGE_TC, TERRACOTTA, YELLOW_TC, WHITE_TC, BROWN_TC, ORANGE_TC, TERRACOTTA];
 const PLAINS = 0, FOREST = 1, DESERT = 2, JUNGLE = 3, TAIGA = 4, TUNDRA = 5, SAVANNA = 6, MESA = 7, SWAMP = 8, CHERRY = 9, MEADOW = 10;
 const BLOCKS = {
@@ -424,6 +437,7 @@ add(BROWN_MUSHROOM, 'Fungo marrone', same((x, y) => y > 5 && y < 9 && Math.abs(x
 item(WAND, 'Bacchetta magica', (x, y) => (x + y === 15 || x + y === 16) && x > 2 && x < 14 ? (x > 11 ? [250, 245, 230] : x < 6 ? jit(x % 2 ? [60, 35, 20] : [110, 70, 40]) : jit([95, 60, 35], 0.06)) : NONE);
 item(SNITCH, "Boccino d'oro", (x, y) => Math.hypot(x - 7.5, y - 8.5) < 3 ? jit([250, 205, 50], 0.08) : y > 3 && y < 9 && (x < 5 || x > 10) && Math.abs(y - 7 + Math.abs(x - 7.5) * 0.4) < 1.6 ? jit([245, 245, 240], 0.03) : NONE);
 item(BROOM, 'Scopa volante', (x, y) => x < 6 && y > 9 && Math.abs(x + y - 15.5) < 3.5 ? jit([205, 170, 90], 0.12) : (x + y === 15 || x + y === 16) && x < 15 ? jit(x === 6 ? [150, 40, 40] : [120, 80, 45], 0.06) : NONE);
+add(SLATE, 'Ardesia', same((x, y) => jit(dim([70, 78, 96], y % 4 === 3 || (x + (y >> 2) * 3) % 6 === 0 ? 0.75 : 1), 0.06)), [6, 'pick', 1]);
 add(ORB, 'Luce magica', same((x, y) => jit(Math.hypot(x - 7.5, y - 7.5) < 4 ? [255, 255, 255] : [190, 225, 255], 0.04)), [0]);
 DROP[TALLGRASS] = DROP[DEADBUSH] = DROP[ORB] = AIR;
 const IDS = NAMES.map((_, id) => id);
@@ -559,11 +573,107 @@ const CITY = 256, cities = new Map();
 function cityAt(x, z) {
   const gx = Math.floor(x / CITY), gz = Math.floor(z / CITY), key = gx + ',' + gz;
   if (!cities.has(key)) {
-    const cx = gx * CITY + 128, cz = gz * CITY + 128, h = height(cx, cz);
-    cities.set(key, hash(gx * 3 + 17, gz * 5 - 11) < 0.6 && h > SEA + 1 && h < 48 ? { cx, cz, h, ruin: hash(gx + 5, gz * 7) < 0.25 } : null);
+    const cx = gx * CITY + 128, cz = gz * CITY + 128, h = height(cx, cz), [kx, kz] = castleCell(Math.floor(gx / 4), Math.floor(gz / 4)), castle = kx === gx && kz === gz;
+    cities.set(key, (castle || hash(gx * 3 + 17, gz * 5 - 11) < 0.6) && h > SEA + 1 && h < 48 ? { cx, cz, h, castle, ruin: !castle && hash(gx + 5, gz * 7) < 0.25 } : null);
   }
   const c = cities.get(key);
   return c && Math.hypot(x - c.cx, z - c.cz) < 64 ? c : null;
+}
+
+function castleCell(fx, fz) {
+  const pick = hash(fx * 7 + 3, fz * 13 + 1) * 16 | 0;
+  for (let i = 0; i < 16; i++) {
+    const k = (pick + i) % 16, gx = fx * 4 + (k & 3), gz = fz * 4 + (k >> 2), h = height(gx * CITY + 128, gz * CITY + 128);
+    if (h > SEA + 1 && h < 48) return [gx, gz];
+  }
+  return [];
+}
+
+const SITE = 256, sites = new Map();
+function site(gx, gz) {
+  const key = gx + ',' + gz;
+  if (!sites.has(key)) {
+    const x = gx * SITE + ((hash(gx * 5 + 1, gz * 3 - 2) - 0.5) * 80 | 0), z = gz * SITE + ((hash(gx * 7 - 4, gz * 11 + 6) - 0.5) * 80 | 0), b = biome(x, z), h = height(x, z);
+    const kind = h <= SEA + 1 || h > 60 || hash(gx * 13, gz * 17 + 5) > 0.7 ? null : b === DESERT || b === MESA ? 'pyramid' : b === JUNGLE || b === SWAMP ? 'temple' : 'ruin';
+    sites.set(key, kind && { x, z, h, kind, ...SHAPES[kind] });
+  }
+  return sites.get(key);
+}
+const siteAt = (x, z) => { const s = site(Math.round(x / SITE), Math.round(z / SITE)); return s && Math.max(Math.abs(x - s.x), Math.abs(z - s.z)) <= s.r ? s : null; };
+
+const SHAPES = {
+  pyramid: { r: 10, top: 11, base: SANDSTONE, decor: { '0,1,0': GOLD_BLOCK, '0,2,0': CHEST, '-3,1,-3': CHEST, '3,1,-3': CHEST, '-4,4,-4': GLOWSTONE, '4,4,4': GLOWSTONE, '-4,4,4': GLOWSTONE, '4,4,-4': GLOWSTONE },
+    fn: (u, y, v) => {
+      const m = Math.max(Math.abs(u), Math.abs(v));
+      if (m > 10 - y) return undefined;
+      if (y >= 1 && y <= 4 && m <= 4 || Math.abs(u) <= 1 && v > 0 && y >= 1 && y <= 3) return AIR;
+      return y === 10 ? GOLD_BLOCK : y % 4 === 2 ? ORANGE_TC : SANDSTONE;
+    } },
+  temple: { r: 7, top: 10, base: MOSSY, decor: { '0,1,-4': CHEST, '-4,1,-4': CHEST, '0,5,0': CHEST, '-4,3,4': GLOWSTONE, '4,3,4': GLOWSTONE, '4,3,-4': GLOWSTONE },
+    fn: (u, y, v) => {
+      const m = Math.max(Math.abs(u), Math.abs(v)), size = y < 4 ? 7 : y < 7 ? 5 : y < 9 ? 3 : y < 10 ? 1 : -1;
+      if (m > size) return undefined;
+      if (y >= 1 && y <= 3 && m <= 5 || Math.abs(u) <= 1 && v >= 5 && y >= 1 && y <= 2 || y === 5 && m <= 3) return AIR;
+      return hash(u * 7 + y, v * 3) < 0.4 ? MOSSY : COBBLE;
+    } },
+  ruin: { r: 5, top: 13, base: COBBLE, decor: { '0,1,0': CHEST },
+    fn: (u, y, v) => {
+      const d = Math.hypot(u, v);
+      if (d > 3.6) return y === 0 && d < 5 && hash(u, v * 5) < 0.3 ? MOSSY : undefined;
+      if (d < 2.6) return y === 0 ? COBBLE : AIR;
+      if (y > 6 + hash(Math.round(Math.atan2(v, u) * 2), 77) * 7 || u === 0 && v > 0 && y >= 1 && y <= 2) return AIR;
+      return hash(u + y * 31, v) < 0.35 ? MOSSY : COBBLE;
+    } },
+};
+
+function build(d, cx, cz, heights) {
+  const s = site(Math.round((cx * CS + 8) / SITE), Math.round((cz * CS + 8) / SITE));
+  if (!s) return;
+  for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
+    const u = cx * CS + x - s.x, v = cz * CS + z - s.z;
+    if (Math.max(Math.abs(u), Math.abs(v)) > s.r) continue;
+    for (let y = heights[x + 1 + (z + 1) * 18] + 1; y < s.h; y++) d[at(x, y, z)] = s.base;
+    for (let y = 0; y <= s.top; y++) {
+      const id = s.decor[`${u},${y},${v}`] ?? s.fn(u, y, v);
+      if (id !== undefined) d[at(x, s.h + y, z)] = id;
+    }
+  }
+}
+
+const turret = (u, y, v, tx, tz, tall) => {
+  const d = Math.hypot(u - tx, v - tz);
+  if (y > tall) return d <= 4 - (y - tall - 1) * 0.45 ? SLATE : undefined;
+  if (d > 3) return Math.round(u - tx) === 0 && v > tz && y >= 1 && y <= 2 ? AIR : y % 6 === 3 && Math.abs(u - tx) < 1 ? GLASS : STONEBRICK;
+  return y === 0 ? STONEBRICK : AIR;
+};
+
+function hall(u, y, v) {
+  const au = Math.abs(u);
+  if (au > 12 || v < -22 || v > -2) return undefined;
+  if (y > 13) return au <= 26 - y ? SLATE : undefined;
+  if (au === 12 || v === -22 || v === -2) return v === -2 && au <= 1 && y >= 1 && y <= 4 ? AIR : au === 12 && y >= 3 && y <= 9 && v % 4 === 0 ? GLASS : STONEBRICK;
+  if (y === 0 || y === 13) return STONEBRICK;
+  if (y === 1 && v >= -19 && v <= -5 && (au === 3 || au === 8)) return SPRUCE_PLANKS;
+  if (y === 1 && v === -20 && au <= 8) return BIRCH_PLANKS;
+  if (y === 1 && v === -21 && u === 0) return CHEST;
+  if (y >= 5 && y <= 9 && v === -21 && [3, 4, 8, 9].includes(au)) return [REDSTONE_BLOCK, GOLD_BLOCK, LAPIS_BLOCK, EMERALD_BLOCK][(u > 0 ? 2 : 0) + (au > 5 ? 1 : 0)];
+  return y === 9 && u % 4 === 0 && v % 4 === 0 ? ORB : AIR;
+}
+
+function hogwarts(u, y, v) {
+  for (const [tx, tz, tall] of [[-30, -30, 20], [30, -30, 20], [-30, 30, 20], [30, 30, 20], [20, -12, 30], [-20, -12, 24]])
+    if (Math.hypot(u - tx, v - tz) <= 4) return turret(u, y, v, tx, tz, tall);
+  const h = hall(u, y, v), m = Math.max(Math.abs(u), Math.abs(v));
+  if (h !== undefined) return h;
+  if (m === 30) return v === 30 && Math.abs(u) <= 2 && y >= 1 && y <= 5 ? AIR : y < 8 ? STONEBRICK : y === 8 && (u + v) % 2 === 0 ? STONEBRICK : undefined;
+  return y === 0 && m < 30 && Math.abs(u) <= 1 && v > -2 ? STONEBRICK : undefined;
+}
+
+function castle(d, ox, oz, city) {
+  for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) for (let y = 0; y < 46; y++) {
+    const id = hogwarts(ox + x - city.cx, y, oz + z - city.cz);
+    if (id !== undefined) d[at(x, city.h + y, z)] = id;
+  }
 }
 
 function ground(x, z) {
@@ -584,6 +694,7 @@ function roof(d, x0, z0, x1, z1, y, id, gable) {
 
 function role(cx, cz, city) {
   const r = hash(cx * 7 + 3, cz * 11 - 5);
+  if (city.castle) return castle;
   if (cx * CS === city.cx && cz * CS === city.cz) return plaza;
   if (!city.ruin && cx * CS === city.cx + CS && Math.abs(cz * CS - city.cz) <= CS) return pitch;
   return city.ruin ? (r < 0.3 ? park : house) : r < 0.14 ? shop : r < 0.24 ? statue : r < 0.34 ? park : r < 0.5 ? tower : house;
@@ -686,7 +797,7 @@ function carve(d, x, z, wx, wz, h) {
 function generate(cx, cz) {
   const d = new Uint8Array(CS * CS * H), heights = new Int16Array(18 * 18);
   for (let x = -1; x <= CS; x++) for (let z = -1; z <= CS; z++) heights[x + 1 + (z + 1) * 18] = ground(cx * CS + x, cz * CS + z);
-  const city = cityAt(cx * CS + 8, cz * CS + 8), built = city && Math.hypot(cx * CS + 8 - city.cx, cz * CS + 8 - city.cz) < 44;
+  const city = cityAt(cx * CS + 8, cz * CS + 8), built = city && Math.hypot(cx * CS + 8 - city.cx, cz * CS + 8 - city.cz) < (city.castle ? 58 : 44);
   for (let x = 0; x < CS; x++) for (let z = 0; z < CS; z++) {
     const wx = cx * CS + x, wz = cz * CS + z, h = heights[x + 1 + (z + 1) * 18], b = biome(wx, wz);
     let top = surface(h, b, wx, wz);
@@ -695,15 +806,16 @@ function generate(cx, cz) {
     carve(d, x, z, wx, wz, h);
     for (let y = h + 1; y <= SEA; y++) d[at(x, y, z)] = b === TUNDRA && y === SEA ? ICE : WATER;
     if (b === SWAMP && top === GRASS && noise(wx / 7 + 3, wz / 7) > 0.62) { d[at(x, h, z)] = WATER; top = WATER; }
-    if (built) d[at(x, h, z)] = x > 2 && z > 2 ? GRASS : city.ruin && hash(wx, wz) < 0.3 ? GRAVEL : x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD;
+    if (built) d[at(x, h, z)] = x > 2 && z > 2 || city.castle ? GRASS : city.ruin && hash(wx, wz) < 0.3 ? GRAVEL : x === 1 && z > 2 || z === 1 && x > 2 ? ROAD_LINE : ROAD;
     else decorate(d, x, z, wx, wz, h, top, b);
   }
   if (built) {
     const fn = role(cx, cz, city);
     fn(d, cx * CS, cz * CS, city);
-    if (fn !== pitch) fill(d, 3, city.h + 1, 3, 3, city.h + 3, 3, () => STONEBRICK);
-    if (fn !== pitch && !city.ruin) d[at(3, city.h + 4, 3)] = LAMP;
+    if (fn !== pitch && fn !== castle) fill(d, 3, city.h + 1, 3, 3, city.h + 3, 3, () => STONEBRICK);
+    if (fn !== pitch && fn !== castle && !city.ruin) d[at(3, city.h + 4, 3)] = LAMP;
   }
+  build(d, cx, cz, heights);
   for (const [i, id] of Object.entries(edits[ck(cx, cz)] ?? {})) {
     d[i] = id;
     if (FLOWS.includes(id) || LAVAS.includes(id)) flowQ.add([cx * CS + i % CS, i / (CS * CS) | 0, cz * CS + (i / CS | 0) % CS].join());
@@ -1005,7 +1117,9 @@ let caught = saved?.caught ?? 0, snitch = null, coins = saved?.coins ?? 0, shopp
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
-let mana = 20, lumos = false, levi = null, patronus = null;
+let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0;
+let quest = saved?.quest ?? null, done = saved?.done ?? 0, tipAt = saved?.tip ?? 0;
+const got = new Set(saved?.trophies), spellsCast = new Set(saved?.spellsCast);
 
 function collides(p) {
   for (let x = Math.floor(p.x - 0.3); x <= Math.floor(p.x + 0.3); x++)
@@ -1138,6 +1252,7 @@ function raycast(fluids = false, reach = REACH) {
 const tier = type => (TOOLS[type]?.indexOf(heldId()) ?? -1) + 1;
 
 function give(id, n) {
+  if (FIRST[id]) award(FIRST[id]);
   for (const s of slots) if (n && s?.id === id && s.n < MAX(id)) { const k = Math.min(n, MAX(id) - s.n); s.n += k; n -= k; }
   for (let i = 0; i < 36 && n; i++) if (!slots[i]) { const k = Math.min(n, MAX(id)); slots[i] = { id, n: k }; n -= k; }
   return n;
@@ -1210,8 +1325,8 @@ function place() {
   if (levi) return release();
   const r = raycast(), p = player.pos, id = heldId(), t = aimAnimal(r);
   if (t?.shop) return openShop(t);
-  if (t?.type === 'person') return toast(`${t.name}: ${choice(PHRASES)}`);
-  if (t?.type === 'unicorn') { player.riding = t; return toast('In sella! Spazio per volare, Shift per scendere'); }
+  if (t?.type === 'person') return talk(t);
+  if (t?.type === 'unicorn') { player.riding = t; award('unicorn'); return toast('In sella! Spazio per volare, Shift per scendere'); }
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
@@ -1251,6 +1366,7 @@ function sleep(hit) {
   bed = hit;
   if (night) { time = Math.ceil(time / DAY) * DAY + DAY * 0.03; $('.fade').animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], 1500); }
   toast(night ? 'Buongiorno! Rinascerai qui' : 'Rinascerai qui · si dorme solo di notte');
+  award('bed');
 }
 
 function eat(id) {
@@ -1522,7 +1638,7 @@ function updateFlyers(dt, day) {
 
 function updateCars(dt) {
   const city = cityAt(player.pos.x, player.pos.z);
-  if (city && !city.ruin && cars.length < 5 && rnd() < dt) makeCar(city);
+  if (city && !city.ruin && !city.castle && cars.length < 5 && rnd() < dt) makeCar(city);
   for (const c of [...cars]) {
     if (dt) drive(c, dt);
     if (c.g.position.distanceTo(player.pos) > 90) { scene.remove(c.g); c.g.traverse(o => o.geometry?.dispose()); c.mats.forEach(m => m.dispose()); cars.splice(cars.indexOf(c), 1); }
@@ -1592,6 +1708,9 @@ function cast(text) {
   const to = r ? new THREE.Vector3(...r.hit).addScalar(0.5) : null, fail = fn(r, to);
   if (fail) return toast(fail);
   if (!is('infinite')) mana -= cost;
+  award('spell');
+  spellsCast.add(name);
+  if (spellsCast.size === SPELLS.length) award('allspells');
   beam(range ? to ?? camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()), range) : null, color);
   sound(2600, 0.2, 0.5);
   toast(`✨ ${name} ✨`);
@@ -1730,6 +1849,7 @@ function herbivicus(r) {
 }
 
 function patronum() {
+  award('patronus');
   if (patronus) return void (patronus.t = 30);
   const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: '#dff0ff', transparent: true, opacity: 0.7, depthWrite: false });
   part(g, 0.6, 0.7, 1.3, mat).position.y = 1.2;
@@ -1787,6 +1907,7 @@ scene.add(broom);
 
 function mount() {
   player.broom = !player.broom;
+  award('broom');
   player.riding = null;
   player.fly = false;
   player.peak = player.pos.y;
@@ -1841,6 +1962,8 @@ function catchSnitch() {
   for (let i = 0; i < 40; i++) glint(p.clone(), choice(['#ffd43b', '#ffffff', '#ff6b6b']), 1.2, spread(10));
   if (give(SNITCH, 1)) drop(SNITCH, 1, p.x, p.y, p.z);
   toast(`🏆 Hai preso il Boccino d'oro! +150 punti · boccini presi: ${++caught}`);
+  award(caught >= 10 ? 'snitch10' : 'snitch');
+  award('snitch');
   sound(3200, 0.3, 0.6);
   removeSnitch();
   drawInv();
@@ -1875,6 +1998,121 @@ function updateQuidditch(dt) {
   }
   if (!team.length || team[0].g.position.distanceTo(player.pos) < 100) return;
   for (const f of team.splice(0)) { scene.remove(f.g); f.g.traverse(o => o.geometry?.dispose()); f.mats.forEach(m => m.dispose()); }
+}
+
+const LOGS = [LOG, BIRCH_LOG, SPRUCE_LOG, JUNGLE_LOG, CHERRY_LOG, ACACIA_LOG];
+const TROPHIES = {
+  wood: ['🪵 Taglialegna', 'Raccogli il primo tronco'], pick: ['⛏️ Al lavoro', 'Crafta un piccone'], iron: ['⚙️ Età del ferro', 'Ottieni un lingotto di ferro'],
+  diamond: ['💎 Diamanti!', 'Trova un diamante'], wand: ['🪄 Mago', 'Crafta una bacchetta'], spell: ['✨ Primo incantesimo', 'Lancia un incantesimo'],
+  allspells: ['📖 Gran maestro', 'Lancia tutti i 15 incantesimi'], patronus: ['🦌 Expecto Patronum', 'Evoca il tuo patronus'],
+  broom: ['🧹 Si vola!', 'Sali su una scopa'], sky: ['☁️ Tra le nuvole', 'Vola in scopa sopra quota 90'], snitch: ['🟡 Cercatore', "Prendi il Boccino d'oro"],
+  snitch10: ['🏆 Campione di quidditch', 'Prendi 10 boccini'], unicorn: ['🦄 Cavaliere fatato', 'Cavalca un unicorno'], bed: ["🛏️ Sogni d'oro", 'Dormi in un letto'],
+  buy: ['🛒 Primo acquisto', 'Compra qualcosa in un negozio'], rich: ['🪙 Ricco sfondato', 'Accumula 500 monete'], mission: ['📜 Ben fatto', 'Completa una missione'],
+  missions: ['🎖️ Eroe della città', 'Completa 10 missioni'], pyramid: ['🔺 Faraone', 'Trova una piramide nel deserto'], temple: ['🛕 Esploratore', 'Trova un tempio nella giungla'],
+  ruin: ['🗿 Archeologo', 'Trova una torre in rovina'], treasure: ['💰 Tesoro!', 'Apri un baule del tesoro'], hogwarts: ['🏰 Benvenuto a Hogwarts', 'Trova il castello'],
+};
+const FIRST = { [IRON]: 'iron', [DIAMOND]: 'diamond', [WAND]: 'wand', ...Object.fromEntries([...LOGS.map(id => [id, 'wood']), ...TOOLS.pick.map(id => [id, 'pick'])]) };
+const TIPS = [
+  [touch ? 'Muoviti col pollice sinistro e guardati intorno col destro' : 'Muoviti con WASD e guardati intorno col mouse', () => bobT > 12],
+  [touch ? 'Tieni premuto ⛏️ su un albero per prendere un tronco' : 'Tieni premuto il click sinistro su un albero per prendere un tronco', () => LOGS.some(id => count(id))],
+  [`Apri l'inventario (${touch ? '🛠️' : 'E'}) e crafta assi e bastoni`, () => count(STICK) > 0],
+  ['Crafta un piccone di legno e scava un po\' di pietra', () => count(COBBLE) > 0],
+  ['Crafta la bacchetta (bastone + piuma delle galline) e lancia Lumos', () => got.has('spell')],
+  [`Cerca una città e parla con le persone per le missioni · ${touch ? '🗺️' : 'M'} apre la mappa`, () => got.has('mission')],
+];
+const WANTS = [[LOG, 10], [COBBLE, 20], [COAL, 8], [IRON, 3], [WOOL, 3], [PORK_C, 2], [POPPY, 3], [DIAMOND, 1], [SNITCH, 1], [GLASS, 6], [PUMPKIN, 2], [EMERALD, 1], [GOLD, 2], [FEATHER, 4]];
+
+function award(k) {
+  if (got.has(k)) return;
+  got.add(k);
+  $('.award').textContent = `🏆 Trofeo: ${TROPHIES[k][0]}`;
+  $('.award').animate([{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], 4000);
+  sound(2400, 0.3, 0.5);
+}
+
+function talk(t) {
+  if (quest && count(quest.id) >= quest.n) {
+    take(quest.id, quest.n);
+    coins += quest.pay;
+    toast(`${t.name}: Grazie mille! Eccoti 🪙 ${quest.pay}`);
+    award(++done >= 10 ? 'missions' : 'mission');
+    award('mission');
+    sound(3000, 0.25, 0.3);
+    quest = null;
+    return drawInv();
+  }
+  if (quest) return toast(`${t.name}: ${choice(PHRASES)} · ricordati: ${quest.n} × ${NAMES[quest.id]} (${count(quest.id)}/${quest.n})`);
+  const [id, n] = choice(WANTS);
+  quest = { id, n, pay: value(id) * n * 2 + 10 };
+  toast(`${t.name}: Mi porteresti ${n} × ${NAMES[id]}? Ti do 🪙 ${quest.pay}`);
+}
+
+function checkGoals() {
+  const p = player.pos, s = siteAt(p.x, p.z), city = cityAt(p.x, p.z);
+  if (s) award(s.kind);
+  if (city?.castle && Math.hypot(p.x - city.cx, p.z - city.cz) < 34) award('hogwarts');
+  if (coins >= 500) award('rich');
+  if (player.broom && p.y > 90) award('sky');
+  while (tipAt < TIPS.length && TIPS[tipAt][1]()) tipAt++;
+  $('.tip').textContent = tipAt < TIPS.length && mode !== 'creative' ? '💡 ' + TIPS[tipAt][0] : '';
+}
+
+function compass(x, z) {
+  const p = player.pos, rel = Math.atan2(x - p.x, p.z - z) + player.yaw;
+  return `${[...'⬆↗➡↘⬇↙⬅↖'][Math.round(rel / (Math.PI / 4)) & 7]} ${Math.round(Math.hypot(x - p.x, z - p.z))} m`;
+}
+
+function drawTrophies() {
+  $('.score').textContent = `${got.size} / ${Object.keys(TROPHIES).length}`;
+  $('.cups').replaceChildren(...Object.entries(TROPHIES).map(([k, [name, text]]) => {
+    const b = document.createElement('button');
+    b.className = 'recipe';
+    b.disabled = !got.has(k);
+    b.append(...[['b', name], ['span', text]].map(([tag, textContent]) => Object.assign(document.createElement(tag), { textContent })));
+    return b;
+  }));
+}
+
+const MAPCOL = { [GRASS]: '#5f9f35', [SAND]: '#dbcfa3', [SNOW]: '#f0f6fc', [STONE]: '#888888', [RED_SAND]: '#c86e3c', [DRY_GRASS]: '#aaa550', [GRAVEL]: '#8a807a', [CLAY]: '#a0a5b2' };
+const SIGNS = { pyramid: '🔺', temple: '🛕', ruin: '🗿' };
+
+function drawMap() {
+  const g = $('.chart').getContext('2d'), px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
+  for (let i = 0; i < 160; i++) for (let j = 0; j < 160; j++) {
+    const x = px + i * 2 - 160, z = pz + j * 2 - 160, h = ground(x, z), slope = h - ground(x, z - 2);
+    g.fillStyle = h <= SEA ? `hsl(215 60% ${Math.max(22, 48 - (SEA - h) * 3)}%)` : MAPCOL[surface(h, biome(x, z), x, z)] ?? '#888888';
+    g.fillRect(i * 2, j * 2, 2, 2);
+    g.fillStyle = slope > 0 ? '#ffffff' : '#000000';
+    g.globalAlpha = Math.min(0.35, Math.abs(slope) * 0.12);
+    g.fillRect(i * 2, j * 2, 2, 2);
+    g.globalAlpha = 1;
+  }
+  drawMarks(g, px, pz);
+}
+
+function drawMarks(g, px, pz) {
+  const mark = (x, z, sign) => g.fillText(sign, x - px + 160, z - pz + 160);
+  g.font = '18px system-ui';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  for (let gx = Math.floor((px - 160) / CITY); gx <= Math.floor((px + 160) / CITY); gx++) for (let gz = Math.floor((pz - 160) / CITY); gz <= Math.floor((pz + 160) / CITY); gz++) {
+    const c = cityAt(gx * CITY + 128, gz * CITY + 128), s = site(gx, gz);
+    if (c) mark(c.cx + 8, c.cz + 8, c.castle ? '🏰' : c.ruin ? '🏚️' : '🏘️');
+    if (s) mark(s.x, s.z, SIGNS[s.kind]);
+  }
+  if (bed) mark(bed[0], bed[2], '🛏️');
+  g.save();
+  g.translate(160, 160);
+  g.rotate(-player.yaw);
+  g.fillStyle = '#ffffff';
+  g.strokeStyle = '#000000';
+  g.lineWidth = 2;
+  g.beginPath(); g.moveTo(0, -9); g.lineTo(6, 7); g.lineTo(-6, 7); g.closePath(); g.stroke(); g.fill();
+  g.restore();
+  const fx = Math.floor(px / 1024), fz = Math.floor(pz / 1024), near = [];
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const [gx, gz] = castleCell(fx + i, fz + j), c = cityAt(gx * CITY + 128, gz * CITY + 128); if (c?.castle) near.push(c); }
+  const c = near.sort((a, b) => Math.hypot(a.cx - px, a.cz - pz) - Math.hypot(b.cx - px, b.cz - pz))[0];
+  $('.far').textContent = c ? `🏰 Hogwarts: ${Math.round(Math.hypot(c.cx - px, c.cz - pz))} m verso ${['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ovest', 'ovest', 'nord-ovest'][Math.round(Math.atan2(c.cx - px, pz - c.cz) / (Math.PI / 4)) & 7]}` : '';
 }
 
 function updateMagic(dt) {
@@ -2031,7 +2269,7 @@ function card(id, n, label, buttons) {
 function drawShop() {
   const [kx, kz] = shopper.shop.split(',').map(Number), stock = STOCK.filter((_, i) => hash(kx * 13 + i, kz * 7) < 0.45), free = is('infinite');
   const done = () => { sound(3000, 0.2, 0.08); drawInv(); drawShop(); };
-  const buy = id => { if (!free) coins -= value(id) * 2; const left = give(id, 1); if (left) drop(id, left, player.pos.x, player.pos.y + 1, player.pos.z); done(); };
+  const buy = id => { award('buy'); if (!free) coins -= value(id) * 2; const left = give(id, 1); if (left) drop(id, left, player.pos.x, player.pos.y + 1, player.pos.z); done(); };
   const sell = (id, n) => { take(id, n); coins += value(id) * n; done(); };
   $('.shop-title').textContent = `Negozio di ${shopper.name}`;
   $('.purse').textContent = `🪙 ${coins} monete`;
@@ -2039,7 +2277,7 @@ function drawShop() {
   $('.sell').replaceChildren(...IDS.filter(id => count(id) > 0).map(id => card(id, count(id), `🪙 ${value(id)} l'uno`, [['Vendi 1', () => sell(id, 1)], ['Vendi tutto', () => sell(id, count(id))]])));
 }
 
-const MENUS = ['craft', 'chest', 'cheat', 'dead', 'shop', 'spells'];
+const MENUS = ['craft', 'chest', 'cheat', 'dead', 'shop', 'spells', 'map', 'trophies'];
 const menu = () => MENUS.find(m => $('.' + m).style.display !== 'none');
 
 function setPlaying(on) {
@@ -2068,19 +2306,25 @@ function openMenu(name) {
   if (name === 'craft') drawCraft();
   if (name === 'shop') drawShop();
   if (name === 'chest') drawChest();
+  if (name === 'map') drawMap();
+  if (name === 'trophies') drawTrophies();
   setPlaying(false);
   document.exitPointerLock?.();
 }
 
 const saveChests = () => localStorage.setItem('blocchi-chests', JSON.stringify(chests));
 
+const treasure = (x, z) => !!(siteAt(x, z) || cityAt(x, z)?.castle);
+
 function loot([x, y, z]) {
   const k = i => hash(x * 31 + i, z * 17 + y);
+  if (treasure(x, z)) return { [GOLD]: 3 + (k(1) * 6 | 0), [DIAMOND]: 1 + (k(2) * 4 | 0), [EMERALD]: 2 + (k(3) * 5 | 0), [GLOWSTONE]: 1 + (k(4) * 3 | 0), [SNITCH]: k(5) < 0.2 ? 1 : 0 };
   return { [COAL]: 2 + (k(1) * 7 | 0), [TORCH]: 2 + (k(2) * 5 | 0), [IRON_ORE]: 1 + (k(3) * 3 | 0), [IRON]: k(4) < 0.4 ? 1 + (k(5) * 3 | 0) : 0, [GOLD]: k(6) < 0.3 ? 1 + (k(7) * 3 | 0) : 0, [DIAMOND]: k(8) < 0.15 ? 1 + (k(9) * 2 | 0) : 0 };
 }
 
 function openChest(hit) {
   chestAt = hit.join();
+  if (!chests[chestAt] && treasure(hit[0], hit[2])) award('treasure');
   chests[chestAt] ??= loot(hit);
   openMenu('chest');
 }
@@ -2145,7 +2389,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins} · 🧭 ${bed ? 'letto' : 'inizio'} ${compass(...(bed ?? [8, 0, 8]))}${quest ? ` · 📜 ${NAMES[quest.id]} ${Math.min(count(quest.id), quest.n)}/${quest.n}` : ''}${need}`;
 }
 
 function spawn() {
@@ -2184,6 +2428,7 @@ function loop(t) {
   updateMagic(dt);
   updateSnitch(dt);
   updateQuidditch(dt);
+  if ((checkT += dt) > 0.5) { checkT = 0; checkGoals(); }
   updateCars(dt);
   if (dt) updateFlyers(dt, Math.sin(time / DAY * Math.PI * 2) > 0);
   drawHearts();
@@ -2208,6 +2453,8 @@ onkeydown = e => {
   if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
   if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
   if (e.code === 'KeyI' && !e.repeat) openMenu(menu() ? null : 'spells');
+  if (e.code === 'KeyM' && !e.repeat) openMenu(menu() ? null : 'map');
+  if (e.code === 'KeyL' && !e.repeat) openMenu(menu() ? null : 'trophies');
   if (e.code === 'Place' && playing) place();
   if ((e.code === 'KeyT' || e.code === 'Slash') && !e.repeat && playing) { e.preventDefault(); $('.spell').value = ''; $('.spell').style.display = ''; $('.spell').focus(); }
 };
@@ -2249,7 +2496,7 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast] }));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
