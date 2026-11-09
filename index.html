@@ -92,6 +92,7 @@
   <button data-key="Place">🧱</button><button data-key="Dig">⛏️</button>
   <button data-key="ShiftLeft">⬇️</button><button data-key="Space">⬆️</button>
   <button data-menu="spells">🪄</button><button data-menu="map">🗺️</button>
+  <button data-key="KeyV">🎥</button>
 </div>
 <button class="corner touch" data-key="Pause">⏸</button>
 <div class="panel stack start">
@@ -103,9 +104,10 @@
   <button class="mcbtn" data-menu="spells">Incantesimi</button>
   <button class="mcbtn" data-menu="map">Mappa</button>
   <button class="mcbtn" data-menu="trophies">Trofei</button>
+  <button class="mcbtn music">Musica: sì</button>
   <details class="help"><summary class="mcbtn">Comandi</summary>
-    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
-    <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · 🗺️ mappa · ⏸ pausa · parla con le persone per le missioni</p>
+    <p class="mouse">WASD muovi · Spazio salta/nuota · Shift corri · F vola · E inventario · C trucchi · T lancia un incantesimo (Tab completa) · I libro degli incantesimi · M mappa · L trofei · V visuale<br>Tieni premuto click sinistro per rompere · Click destro piazza, apre bauli e porte · 1-9 o rotella scegli · Esc pausa</p>
+    <p class="touch">Pollice sinistro muovi · pollice destro guarda<br>⛏️ tieni premuto per rompere · 🧱 metti/apri · ⬆️ salta · ⬇️ scendi/corri · 🕊️ vola · 🛠️ inventario · 🪄 incantesimi · 🗺️ mappa · 🎥 visuale · ⏸ pausa · parla con le persone per le missioni</p>
   </details>
   <button class="mcbtn fresh">Nuovo mondo</button>
 </div>
@@ -1113,7 +1115,7 @@ const flies = new THREE.Points(new THREE.BufferGeometry().setAttribute('position
   new THREE.PointsMaterial({ color: '#d9ff7a', size: 5, sizeAttenuation: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 flies.frustumCulled = false;
 scene.add(outline, crack, sun, moon, ambient, camera, clouds, stars, rainbow, flies, ...lamps);
-const HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
+const STORM = new THREE.Color('#5d6b7c'), GREY = new THREE.Color(), WHITE = new THREE.Color('#ffffff'), HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
 const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
 const SHADE = new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3);
@@ -1150,14 +1152,15 @@ const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), slots 
 const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id) && !CROPS.includes(id));
 const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) || [WAND, BROOM, HOE, ROD].includes(id) ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
 const heldId = () => slots[sel]?.id ?? 0;
-const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
+const eye = new THREE.Vector3(), gaze = new THREE.Vector3(), joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}'), history = [], locks = new Set(saved?.locks);
 let chestAt = '';
 let caught = saved?.caught ?? 0, snitch = null, coins = saved?.coins ?? 0, shopper = null, bed = saved?.bed, spawnT = 0, attackT = 0, bobT = 0, bobAmp = 0, step = 0;
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
-let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0, station = null, bob = null;
+let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0, station = null, bob = null, view = 0;
+let weather = 'clear', weatherT = 90, gloom = 0, flash = 0, rainGain = null, musicT = 20, music = localStorage.getItem('blocchi-music') !== 'off';
 const effects = {}, effect = k => effects[k] > clock, crops = new Set(saved?.crops);
 let quest = saved?.quest ?? null, done = saved?.done ?? 0, tipAt = saved?.tip ?? 0;
 const got = new Set(saved?.trophies), spellsCast = new Set(saved?.spellsCast);
@@ -1277,7 +1280,7 @@ function look(dx, dy, k) {
 }
 
 function raycast(fluids = false, reach = REACH) {
-  const o = camera.position.toArray(), d = camera.getWorldDirection(new THREE.Vector3()).toArray();
+  const o = eye.toArray(), d = gaze.toArray();
   const b = o.map(Math.floor), s = d.map(Math.sign), delta = d.map(v => Math.abs(1 / v));
   const tMax = o.map((v, i) => (s[i] > 0 ? b[i] + 1 - v : v - b[i]) * delta[i]);
   let prev = null;
@@ -1700,8 +1703,8 @@ function removeAnimal(a) {
 }
 
 function aimAnimal(r) {
-  aim.setFromCamera(center, camera);
-  const hit = aim.intersectObjects(animals.filter(a => a !== player.riding).map(a => a.g), true)[0], block = r ? camera.position.distanceTo(new THREE.Vector3(...r.hit).addScalar(0.5)) : Infinity;
+  aim.set(eye, gaze);
+  const hit = aim.intersectObjects(animals.filter(a => a !== player.riding).map(a => a.g), true)[0], block = r ? eye.distanceTo(new THREE.Vector3(...r.hit).addScalar(0.5)) : Infinity;
   return hit && hit.distance < Math.min(5, block) ? animals.find(a => a.g === hit.object.parent) : null;
 }
 
@@ -1758,13 +1761,13 @@ function cast(text) {
   award('spell');
   spellsCast.add(name);
   if (spellsCast.size === SPELLS.length) award('allspells');
-  beam(range ? to ?? camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()), range) : null, color);
+  beam(range ? to ?? eye.clone().addScaledVector(gaze, range) : null, color);
   sound(2600, 0.2, 0.5);
   toast(`✨ ${name} ✨`);
 }
 
 function beam(to, color) {
-  const from = tip.getWorldPosition(new THREE.Vector3());
+  const from = wandTip();
   if (!to) { for (let i = 0; i < 16; i++) glint(from.clone(), color, 0.6 + rnd() * 0.4, spread(2)); return; }
   const n = Math.max(1, Math.min(60, from.distanceTo(to) * 3 | 0));
   for (let i = 0; i <= n; i++) glint(from.clone().lerp(to, i / n).add(spread(0.1)), color, 0.2 + i / n * 0.5, new THREE.Vector3());
@@ -1807,7 +1810,7 @@ function leviosa(r) {
   setTile(mesh, [side, side, top, bottom, side, side]);
   mesh.position.set(...r.hit).addScalar(0.5);
   scene.add(mesh);
-  levi = { id, mesh, dist: Math.max(3, camera.position.distanceTo(mesh.position)) };
+  levi = { id, mesh, dist: Math.max(3, eye.distanceTo(mesh.position)) };
   set(...r.hit, AIR);
   wake(...r.hit);
 }
@@ -1968,7 +1971,7 @@ function mount() {
 
 function soar(dt) {
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, up = key('Space') - key('ShiftLeft');
-  const want = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(f * 16).add(new THREE.Vector3(Math.cos(p.yaw) * s * 8, up * 8, -Math.sin(p.yaw) * s * 8));
+  const want = gaze.clone().multiplyScalar(f * 16).add(new THREE.Vector3(Math.cos(p.yaw) * s * 8, up * 8, -Math.sin(p.yaw) * s * 8));
   p.vel.lerp(want, Math.min(1, dt * 3));
   const steps = Math.ceil(p.vel.length() * dt / 0.4);
   p.ground = false;
@@ -1991,7 +1994,7 @@ function makeSnitch() {
 
 function updateSnitch(dt) {
   if (!snitch) return void (player.broom && rnd() < dt * 0.15 && makeSnitch());
-  const s = snitch, p = s.g.position, away = p.clone().sub(camera.position), d = away.length();
+  const s = snitch, p = s.g.position, away = p.clone().sub(eye), d = away.length();
   if ((s.t -= dt) < 0 || solid(get(...p.toArray().map(Math.floor)))) {
     s.t = 0.3 + rnd();
     s.aim = p.clone().add(spread(20));
@@ -2063,6 +2066,7 @@ const TROPHIES = {
   ruin: ['🗿 Archeologo', 'Trova una torre in rovina'], treasure: ['💰 Tesoro!', 'Apri un baule del tesoro'], hogwarts: ['🏰 Benvenuto a Hogwarts', 'Trova il castello'],
   furnace: ['🔥 Fornaio', 'Costruisci una fornace'], harvest: ['🌾 Contadino', 'Raccogli il grano maturo'], bread: ['🍞 Panettiere', 'Fai il pane'],
   potion: ['🧪 Pozionista', 'Prepara una pozione nel calderone'], fish: ['🎣 Pescatore', 'Pesca un pesce'], pet: ['🐶 Migliore amico', 'Fai amicizia con un cane'], owl: ['🦉 Posta via gufo', 'Prendi un gufo'],
+  storm: ['⛈️ Sotto la tempesta', 'Resta fuori durante un temporale'], view: ['🎥 Regista', 'Prova la visuale in terza persona'],
 };
 const FIRST = { [IRON]: 'iron', [DIAMOND]: 'diamond', [WAND]: 'wand', [FURNACE]: 'furnace', [WHEAT]: 'harvest', [BREAD]: 'bread', [FISH]: 'fish', ...Object.fromEntries(POTIONS.map((_, i) => [184 + i, 'potion'])), ...Object.fromEntries([...LOGS.map(id => [id, 'wood']), ...TOOLS.pick.map(id => [id, 'pick'])]) };
 const TIPS = [
@@ -2252,7 +2256,7 @@ function updateFishing() {
   bob.mesh.position.y = bob.y + (biting ? -0.25 : Math.sin(clock * 3) * 0.04);
   if (biting && !bob.splash) { bob.splash = true; sound(500, 0.3, 0.3); for (let i = 0; i < 10; i++) glint(bob.mesh.position.clone(), '#cfe9ff', 0.6, spread(3).setY(2)); }
   if (clock > bob.bite + 1.5) { bob.bite = clock + 3 + rnd() * 7; bob.splash = false; }
-  bob.line.geometry.setFromPoints([tip.getWorldPosition(new THREE.Vector3()), bob.mesh.position]);
+  bob.line.geometry.setFromPoints([wandTip(), bob.mesh.position]);
 }
 
 function befriend(a, id) {
@@ -2302,10 +2306,132 @@ function hover(a, dt) {
   toast(`🦉 ${a.name} ti ha portato: ${NAMES[id]}`);
 }
 
+const me = new THREE.Group(), meHead = new THREE.Group(), meHand = new THREE.Object3D();
+const [meShirt, mePants, meSkin, meHair] = ['#3aa7a3', '#3b3f9a', '#e0ac69', '#4a2f1b'].map(lambert);
+const meLimb = (w, h, mat, x, top) => { const l = part(me, w, h, w, mat); l.geometry.translate(0, -h / 2, 0); l.position.set(x, top, 0); return l; };
+part(me, 0.5, 0.7, 0.28, meShirt).position.y = 1.1;
+part(meHead, 0.46, 0.46, 0.46, meSkin).position.y = 0.23;
+part(meHead, 0.48, 0.14, 0.48, meHair).position.y = 0.48;
+for (const x of [-0.1, 0.1]) part(meHead, 0.08, 0.06, 0.02, mePants).position.set(x, 0.26, 0.235);
+meHead.position.y = 1.45;
+me.add(meHead);
+const meLegs = [meLimb(0.22, 0.75, mePants, -0.12, 0.75), meLimb(0.22, 0.75, mePants, 0.12, 0.75)], meArms = [meLimb(0.18, 0.68, meShirt, 0.35, 1.44), meLimb(0.18, 0.68, meShirt, -0.35, 1.44)];
+meArms[1].add(meHand);
+meHand.position.y = -0.68;
+scene.add(me);
+const wandTip = () => (view ? meHand : tip).getWorldPosition(new THREE.Vector3());
+
+function thirdPerson() {
+  const back = gaze.clone().multiplyScalar(view === 1 ? -1 : 1);
+  let d = 0;
+  const blocked = b => solid(b) && !CLEAR.includes(b);
+  while (d < 4 && !blocked(get(...eye.clone().addScaledVector(back, d + 0.3).toArray().map(Math.floor)))) d += 0.25;
+  camera.position.addScaledVector(back, Math.max(0, d - 0.3));
+  if (view === 2) camera.rotation.set(-player.pitch, player.yaw + Math.PI, 0);
+}
+
+function updateMe() {
+  me.visible = !!view;
+  hand.visible = !view;
+  if (!view) return;
+  const p = player, sit = p.broom || p.riding, a = Math.sin(bobT) * 0.8 * bobAmp;
+  me.position.copy(p.pos);
+  me.rotation.y = p.yaw + Math.PI;
+  meHead.rotation.x = -p.pitch;
+  meLegs.forEach((l, i) => l.rotation.x = sit ? -1.4 : i ? a : -a);
+  meArms[0].rotation.x = sit ? -0.5 : a;
+  meArms[1].rotation.x = sit ? -0.5 : -a - Math.sin(swing) * 1.2;
+}
+
+const RAIN = 900;
+const rainFx = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(RAIN * 6), 3)), new THREE.LineBasicMaterial({ color: '#a8c0e0', transparent: true, opacity: 0.6 }));
+const snowFx = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(RAIN * 3), 3)), new THREE.PointsMaterial({ color: '#ffffff', size: 0.15, transparent: true, opacity: 0.9 }));
+rainFx.frustumCulled = snowFx.frustumCulled = false;
+scene.add(rainFx, snowFx);
+
+function updateWeather(dt) {
+  if ((weatherT -= dt) < 0) { weatherT = 120 + rnd() * 240; weather = rnd() < 0.55 ? 'clear' : rnd() < 0.75 ? 'rain' : 'storm'; }
+  const c = camera.position, b = biome(Math.floor(c.x), Math.floor(c.z)), dry = [DESERT, MESA, SAVANNA].includes(b), cold = b === TUNDRA || b === TAIGA || c.y > 62;
+  gloom += ((weather === 'storm' ? 0.6 : weather === 'rain' ? 0.35 : 0) - gloom) * Math.min(1, dt * 0.3);
+  let roof = false;
+  for (let y = 1; y < 24 && !roof; y++) roof = solid(get(Math.floor(c.x), Math.floor(c.y) + y, Math.floor(c.z)));
+  rainFx.visible = weather !== 'clear' && !dry && !cold && !roof;
+  snowFx.visible = weather !== 'clear' && !dry && cold && !roof;
+  if (rainFx.visible || snowFx.visible) fall(rainFx.visible ? rainFx : snowFx, dt, rainFx.visible);
+  if (weather === 'storm' && !dry && rnd() < dt * 0.12) { flash = 0.3; setTimeout(() => sound(70, 0.9, 1.6), 400 + rnd() * 1500); }
+  if (weather === 'storm' && !roof && dt) award('storm');
+  flash = Math.max(0, flash - dt);
+  rainVolume(rainFx.visible ? (weather === 'storm' ? 0.25 : 0.15) : 0);
+}
+
+function fall(fx, dt, rain) {
+  const pos = fx.geometry.attributes.position, c = camera.position, n = rain ? 2 : 1;
+  for (let i = 0; i < RAIN; i++) {
+    let x = pos.getX(i * n) + (rain ? 0 : Math.sin(clock + i) * dt * 0.6), y = pos.getY(i * n) - (rain ? 28 : 2.5) * dt, z = pos.getZ(i * n);
+    if (y < c.y - 12 || Math.abs(x - c.x) > 16 || Math.abs(z - c.z) > 16) { x = c.x + rnd() * 32 - 16; z = c.z + rnd() * 32 - 16; y = c.y + 4 + rnd() * 16; }
+    pos.setXYZ(i * n, x, y, z);
+    if (rain) pos.setXYZ(i * 2 + 1, x, y + 0.7, z);
+  }
+  pos.needsUpdate = true;
+}
+
+function rainVolume(v) {
+  if (!audio) return;
+  if (!rainGain) {
+    const buf = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate), d = buf.getChannelData(0), src = audio.createBufferSource(), f = audio.createBiquadFilter();
+    for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1;
+    rainGain = audio.createGain();
+    rainGain.gain.value = 0;
+    src.buffer = buf;
+    src.loop = true;
+    f.type = 'lowpass';
+    f.frequency.value = 1400;
+    src.connect(f).connect(rainGain).connect(audio.destination);
+    src.start();
+  }
+  rainGain.gain.value += (v - rainGain.gain.value) * 0.05;
+}
+
+function note(freq, at, len, vol = 0.05, type = 'triangle', to = freq) {
+  const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  o.frequency.exponentialRampToValueAtTime(to, t + len);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(audio.destination);
+  o.start(t);
+  o.stop(t + len);
+}
+
+function melody() {
+  const scale = [0, 2, 4, 7, 9, 12, 14, 16], root = choice([196, 220, 247, 262]);
+  let k = rnd() * 5 | 0, t = 0;
+  for (let i = 0; i < 14; i++) {
+    k = THREE.MathUtils.clamp(k + (rnd() * 5 | 0) - 2, 0, scale.length - 1);
+    const f = root * 2 ** (scale[k] / 12), len = choice([0.5, 0.75, 1, 1.5]);
+    note(f, t, len * 2.2);
+    if (i % 4 === 0) note(f / 2, t, len * 3, 0.035, 'sine');
+    t += len;
+  }
+}
+
+function ambience(dt) {
+  if (!audio || !dt) return;
+  if ((musicT -= dt) < 0) { musicT = 150 + rnd() * 150; if (music) melody(); }
+  if (rnd() > dt * 0.25) return;
+  const c = camera.position, day = Math.sin(time / DAY * Math.PI * 2) > 0;
+  if (c.y < ground(Math.floor(c.x), Math.floor(c.z)) - 4) return note(900 + rnd() * 600, 0, 0.4, 0.03, 'sine', 500);
+  if (weather !== 'clear') return;
+  if (day) for (let i = 0; i < 2 + rnd() * 3; i++) note(2600 + rnd() * 900, i * 0.12, 0.1, 0.02, 'sine', 3800 + rnd() * 600);
+  else for (let i = 0; i < 3; i++) note(4400, i * 0.08, 0.05, 0.01, 'square');
+}
+
 function updateMagic(dt) {
   if (patronus) updatePatronus(dt);
   if (!levi) return;
-  const to = camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()), levi.dist), obj = levi.mesh ?? levi.a.g;
+  const to = eye.clone().addScaledVector(gaze, levi.dist), obj = levi.mesh ?? levi.a.g;
   if (levi.a) { to.y -= 0.5; levi.a.vel.set(0, 0, 0); }
   obj.position.lerp(to, Math.min(1, dt * 8));
   if (levi.mesh) levi.mesh.rotation.y += dt;
@@ -2531,12 +2657,12 @@ function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
   const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = isWater(fluid), hot = isLava(fluid);
-  ambient.intensity = Math.max(light, effect('night') ? 0.7 : 0) * Math.PI;
-  scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
+  ambient.intensity = Math.max(light * (1 - gloom * 0.5) + flash * 3, effect('night') ? 0.7 : 0) * Math.PI;
+  scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light).lerp(GREY.copy(STORM).multiplyScalar(light), gloom).lerp(WHITE, flash);
   if (hot) scene.background.set(HOT);
   scene.fog.color.copy(scene.background);
   scene.fog.near = hot ? 0.1 : wet ? 1 : R * CS * 0.5;
-  scene.fog.far = hot ? 2.5 : wet ? 24 : R * CS;
+  scene.fog.far = hot ? 2.5 : wet ? 24 : R * CS * (1 - gloom * 0.4);
   sun.position.set(Math.cos(a), Math.sin(a), 0.3).multiplyScalar(400);
   moon.position.copy(sun.position).negate().add(c);
   sun.position.add(c);
@@ -2544,11 +2670,12 @@ function sky(dt) {
   moon.lookAt(c);
   clouds.position.set(c.x, 118, c.z);
   cloudTex.offset.set((c.x + clock * 2) / 512, -c.z / 512);
-  clouds.material.color.setScalar(0.04 + 0.96 * light * light);
+  clouds.material.color.setScalar((0.04 + 0.96 * light * light) * (1 - gloom * 0.5));
+  sun.visible = moon.visible = gloom < 0.3;
   stars.position.copy(c);
   stars.material.opacity = 1 - light;
   rainbow.position.set(c.x, c.y - 90, c.z - 520);
-  rainbow.visible = light > 0.6 && !wet;
+  rainbow.visible = light > 0.6 && !wet && gloom < 0.05;
   flies.visible = light < 0.5;
   if (flies.visible) updateFlies(dt);
 }
@@ -2602,7 +2729,13 @@ function loop(t) {
   camera.position.set(p.pos.x, p.pos.y + 1.62 + Math.abs(Math.sin(bobT)) * 0.07 * bobAmp, p.pos.z);
   hand.position.x = (touch ? 0.2 : 0.34) + Math.sin(bobT) * 0.015 * bobAmp;
   camera.rotation.set(p.pitch, p.yaw, 0);
+  eye.copy(camera.position);
+  gaze.set(0, 0, -1).applyEuler(camera.rotation);
+  if (view) thirdPerson();
+  updateMe();
   sky(dt);
+  updateWeather(dt);
+  ambience(dt);
   const hitBlock = raycast(), target = aimAnimal(hitBlock), r = target ? null : hitBlock;
   attackT -= dt;
   if (target && keys.Dig && attackT <= 0) { attackT = 0.45; attack(target); }
@@ -2630,7 +2763,7 @@ function loop(t) {
   handLight.intensity = effect('night') ? 6 : heldId() === TORCH || GLOW.includes(heldId()) || tip.visible ? 5 : 0;
   handLight.distance = effect('night') ? 40 : 12;
   handLight.color.set(tip.visible || effect('night') ? '#dfe9ff' : '#ffb060');
-  handLight.position.copy(camera.position);
+  handLight.position.copy(eye);
   if (playing || t - drawn > 250) { drawn = t; renderer.render(scene, camera); }
   requestAnimationFrame(loop);
 }
@@ -2644,6 +2777,7 @@ onkeydown = e => {
   if (e.code === 'KeyE' && !e.repeat) openMenu(menu() ? null : 'craft');
   if (e.code === 'KeyC' && !e.repeat) openMenu(menu() ? null : 'cheat');
   if (e.code === 'KeyI' && !e.repeat) openMenu(menu() ? null : 'spells');
+  if ((e.code === 'KeyV' || e.code === 'F5') && !e.repeat) { e.preventDefault?.(); view = (view + 1) % 3; award('view'); }
   if (e.code === 'KeyM' && !e.repeat) openMenu(menu() ? null : 'map');
   if (e.code === 'KeyL' && !e.repeat) openMenu(menu() ? null : 'trophies');
   if (e.code === 'Place' && playing) place();
@@ -2701,6 +2835,8 @@ $('.fresh').onclick = () => {
 for (const b of document.querySelectorAll('.close')) b.onclick = () => openMenu(null);
 $('.instant').onchange = e => cheat.instant = e.target.checked;
 $('.can').onchange = drawCraft;
+$('.music').textContent = `Musica: ${music ? 'sì' : 'no'}`;
+$('.music').onclick = e => { music = !music; localStorage.setItem('blocchi-music', music ? 'on' : 'off'); e.target.textContent = `Musica: ${music ? 'sì' : 'no'}`; };
 $('.spell').onkeydown = e => {
   e.stopPropagation();
   const s = e.key === 'Tab' && SPELLS.find(s => norm(s[0]).startsWith(norm(e.target.value)));
