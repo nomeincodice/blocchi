@@ -704,33 +704,140 @@ function build(d, cx, cz, heights) {
   }
 }
 
-const turret = (u, y, v, tx, tz, tall) => {
-  const d = Math.hypot(u - tx, v - tz);
-  if (y > tall) return d <= 4 - (y - tall - 1) * 0.45 ? SLATE : undefined;
-  if (d > 3) return Math.round(u - tx) === 0 && v > tz && y >= 1 && y <= 2 ? AIR : y % 6 === 3 && Math.abs(u - tx) < 1 ? GLASS : STONEBRICK;
-  return y === 0 ? STONEBRICK : AIR;
+const sector = (du, dv) => Math.round(Math.atan2(dv, du) / (Math.PI / 4) + 8) % 8;
+const spiral = (du, dv, y, top, every, step) => {
+  const s = sector(du, dv);
+  if (!du && !dv || y === 0 || y < top && s === (y + 4) % 8) return step;
+  return (y % every === 0 || y === top) && s !== (y + 3) % 8 && s !== (y + 2) % 8 && s !== (y + 1) % 8 ? step : AIR;
 };
 
+const turret = (u, y, v, tx, tz, tall) => {
+  const du = u - tx, dv = v - tz, d = Math.hypot(du, dv);
+  if (y > tall) {
+    const r = 4 - (y - tall - 1) * 0.45;
+    if (d > r) return undefined;
+    if (d > r - 1.2) return y <= tall + 2 && sector(du, dv) % 2 ? GLASS : SLATE;
+    return y === tall + 1 && du === 2 && !dv ? CHEST : y === tall + 3 && !du && !dv ? ORB : AIR;
+  }
+  if (d > 3) return !du && dv > 0 && y >= 1 && y <= 2 ? AIR : y % 6 === 3 && !du ? GLASS : STONEBRICK;
+  return spiral(du, dv, y, tall, 6, STONEBRICK);
+};
+
+const HOUSES = [REDSTONE_BLOCK, GOLD_BLOCK, LAPIS_BLOCK, EMERALD_BLOCK];
 function hall(u, y, v) {
-  const au = Math.abs(u);
-  if (au > 12 || v < -22 || v > -2) return undefined;
-  if (y > 13) return au <= 26 - y ? SLATE : undefined;
-  if (au === 12 || v === -22 || v === -2) return v === -2 && au <= 1 && y >= 1 && y <= 4 ? AIR : au === 12 && y >= 3 && y <= 9 && v % 4 === 0 ? GLASS : STONEBRICK;
-  if (y === 0 || y === 13) return STONEBRICK;
-  if (y === 1 && v >= -19 && v <= -5 && (au === 3 || au === 8)) return SPRUCE_PLANKS;
-  if (y === 1 && v === -20 && au <= 8) return BIRCH_PLANKS;
-  if (y === 1 && v === -21 && u === 0) return CHEST;
-  if (y >= 5 && y <= 9 && v === -21 && [3, 4, 8, 9].includes(au)) return [REDSTONE_BLOCK, GOLD_BLOCK, LAPIS_BLOCK, EMERALD_BLOCK][(u > 0 ? 2 : 0) + (au > 5 ? 1 : 0)];
+  const au = Math.abs(u), edge = au === 10 || v === -28 || v === -8;
+  if (y > 14) return undefined;
+  if (y === 14) return edge && (u + v) % 2 === 0 ? SLATE : undefined;
+  if (y === 13) return edge ? SLATE : GLASS;
+  if (edge) {
+    if (v === -8 && au <= 1 && y >= 1 && y <= 4) return AIR;
+    if (v === -8 && Math.hypot(u, y - 8) < 2.5 || au === 10 && y >= 3 && y <= 10 && v % 3 === 0) return GLASS;
+    return v === -28 && y >= 5 && y <= 10 && au % 4 > 1 ? HOUSES[(u > 0 ? 2 : 0) + (au > 4 ? 1 : 0)] : STONEBRICK;
+  }
+  if (y === 0) return au === 0 && v > -25 ? REDSTONE_BLOCK : SMOOTH;
+  if (v <= -25) return y === 1 ? SMOOTH : y === 2 && v === -25 && au && au <= 6 ? SPRUCE_PLANKS : y <= 3 && v === -27 && !u ? GOLD_BLOCK : y === 2 && v === -27 && au === 8 ? CHEST : AIR;
+  if (y === 1 && v >= -22 && v <= -11 && au >= 2 && au <= 8 && au !== 5) return au === 3 || au === 7 ? SPRUCE_PLANKS : BIRCH_PLANKS;
   return y === 9 && u % 4 === 0 && v % 4 === 0 ? ORB : AIR;
 }
 
+const ROOMS = {
+  potions: (x, y, z) => y === 1 && x % 3 === 0 && x > -5 && x < 4 && Math.abs(z) % 4 === 2 ? CAULDRON : z === -9 && y === 1 && x % 2 === 0 && x < 4 ? FURNACE
+    : x === -6 && y <= 3 && Math.abs(z) < 8 ? BOOKSHELF : x === -6 && y === 1 && z === 8 ? CHEST : y === 5 && !x && z % 6 === 0 ? LAMP : undefined,
+  dorm: (x, y, z) => (x === -6 || x === 2) && Math.abs(z) < 9 && (y === 1 || y === 4 && (z + 9) % 3 === 0) ? (y === 4 ? EMERALD_BLOCK : [BED, CHEST, AIR][(z + 9) % 3])
+    : y === 5 && x === -2 && z % 6 === 0 ? LAMP : undefined,
+  library: (x, y, z) => x >= -4 && x <= 3 && y <= 4 && z <= 6 && (z + 9) % 3 === 0 ? BOOKSHELF : x === -6 && y === 1 && z % 4 === 0 ? TABLE
+    : x === -6 && y === 1 && z === -9 ? CHEST : y === 5 && x === -5 && z % 4 === 0 ? LAMP : undefined,
+  common(x, y, z) {
+    const ax = Math.abs(x);
+    if (z === -9 && ax <= 2 && y <= 4) return ax <= 1 && y <= 2 ? (y === 1 ? GLOWSTONE : AIR) : BRICKS;
+    if (y === 1 && z === -5 && ax <= 1) return REDSTONE_BLOCK;
+    if (y === 1 && ax === 3 && z === -6) return GOLD_BLOCK;
+    if (x === -6 && Math.abs(z) % 4 === 2 && y >= 2 && y <= 4) return y === 4 ? GOLD_BLOCK : REDSTONE_BLOCK;
+    if (x === -6 && y === 1) return z === 8 ? CHEST : BOOKSHELF;
+    return y === 5 && !x && Math.abs(z) === 4 ? LAMP : undefined;
+  },
+};
+
+function wing(s, x, y, z) {
+  const ax = Math.abs(x), az = Math.abs(z);
+  if (y > 12) return ax <= 20 - y ? SLATE : undefined;
+  if (y === 12) return STONEBRICK;
+  if (ax === 7 || az === 10) {
+    if (z === 10 && !x && y >= 1 && y <= 2) return AIR;
+    return y % 6 > 2 && y % 6 < 5 && (ax === 7 ? z : x) % 3 === 0 ? GLASS : STONEBRICK;
+  }
+  if (y === 0) return s < 0 ? COBBLE : PLANKS;
+  if (y === 6) return x >= 5 && z >= -1 && z <= 1 ? AIR : s > 0 && ax <= 4 && az <= 7 ? REDSTONE_BLOCK : SPRUCE_PLANKS;
+  if (x >= 5 && y < 6 && z === 4 - y) return SPRUCE_PLANKS;
+  return ROOMS[s < 0 ? (y < 6 ? 'potions' : 'dorm') : (y < 6 ? 'library' : 'common')](x, y % 6, z) ?? AIR;
+}
+
+function yard(u, y, v) {
+  const au = Math.abs(u), f = Math.hypot(u, v - 20), t = Math.hypot(au - 12, v - (v > 10 ? 22 : 0));
+  const path = au <= 1 && v > -8 || v >= -7 && v <= -3 && au <= 22 || v >= 9 && v <= 11 && au <= 21;
+  if (y === 0) return path || f < 6.5 ? STONEBRICK : undefined;
+  if (f < 1 && y <= 3) return DIORITE;
+  if (f < 1 && y === 4) return GLOWSTONE;
+  if (f < 4.5 && y === 1) return f < 3.5 ? WATER : STONEBRICK;
+  if (!t && y <= 4) return LOG;
+  if (Math.hypot(t, y - 5) < 2.7) return LEAVES;
+  if (au === 3 && v > 0 && v % 4 === 0 && f > 6.5) return y <= 2 ? SPRUCE_LOG : y === 3 ? LAMP : undefined;
+  return y === 1 && !path && f > 6.5 && hash(u * 3, v * 7) < 0.05 ? FLOWERS[hash(u, v) * 5 | 0] : undefined;
+}
+
+function hagrid(x, y, z) {
+  const d = Math.hypot(x, z);
+  if (!x && z === -2 && y > 3 && y <= 9) return BRICKS;
+  if (y > 3) return d <= 5 - (y - 4) * 0.9 ? SPRUCE_PLANKS : undefined;
+  if (d > 4) return undefined;
+  if (y === 0) return PLANKS;
+  if (d > 3) return !x && z > 0 && y <= 2 ? AIR : y === 2 && !z ? GLASS : COBBLE;
+  return y > 1 ? AIR : { '-2,-1': BED, '2,-1': TABLE, '0,-3': FURNACE, '2,1': CHEST, '-2,1': CAULDRON }[`${x},${z}`] ?? AIR;
+}
+
+function greenhouse(x, y, z) {
+  const ax = Math.abs(x), az = Math.abs(z);
+  if (y > 5) return ax <= 10 - y ? GLASS : undefined;
+  if (y === 0) return !x || ax === 5 || az === 8 ? STONEBRICK : FARMLAND;
+  if (ax === 5 || az === 8) return az === 8 && !x && y <= 2 ? AIR : y === 1 ? STONEBRICK : GLASS;
+  if (y === 5) return !x && z % 4 === 0 ? LAMP : AIR;
+  return y === 1 && x ? [WHEAT_RIPE, CARROT_RIPE, RED_MUSHROOM, BROWN_MUSHROOM, ...FLOWERS][(ax * 7 + az * 3) % 9] : AIR;
+}
+
+function willow(du, y, dv) {
+  const w = Math.hypot(du, dv);
+  if (w < 1.5 && y <= 9) return LOG;
+  if (Math.abs(du) === Math.abs(dv) && w < 6 && y === 5 + Math.round(w / 1.5)) return LOG;
+  return y > 5 && Math.hypot(w * 0.7, y - 10) < 4 && hash(du * 5 + y, dv * 3) < 0.75 ? LEAVES : undefined;
+}
+
+function forest(u, y, v) {
+  const cu = Math.round(u / 6) * 6, cv = Math.round(v / 6) * 6, k = hash(cu * 3, cv * 5);
+  if (k > 0.75 || Math.hypot(cu, cv) > 46) return undefined;
+  const d = Math.hypot(u - cu - (k * 10 | 0) % 3 + 1, v - cv - (k * 100 | 0) % 3 + 1), top = 8 + (k * 6 | 0);
+  if (!d) return y >= 1 && y < top ? SPRUCE_LOG : undefined;
+  return y >= 3 && y <= top && d <= Math.min(2.5, (top + 1 - y) / 2.2) ? SPRUCE_LEAVES : undefined;
+}
+
+function grounds(u, y, v) {
+  const au = Math.abs(u);
+  if (v > 30 && v < 46 && au <= 1) return y === 0 ? STONEBRICK : undefined;
+  if (v > 30 && v < 46 && au === 3 && v % 5 === 0) return y <= 2 ? SPRUCE_LOG : y === 3 ? LAMP : undefined;
+  if (Math.hypot(u + 14, v - 40) <= 5) return hagrid(u + 14, y, v - 40);
+  if (u >= -27 && u <= -21 && v >= 32 && v <= 38) return y === 0 ? FARMLAND : y === 1 && (u + v) % 2 === 0 ? PUMPKIN : undefined;
+  if (u >= 34 && u <= 44 && Math.abs(v) <= 8) return greenhouse(u - 39, y, v);
+  if (Math.hypot(u + 40, v) <= 7) return willow(u + 40, y, v);
+  return v < -33 ? forest(u, y, v) : undefined;
+}
+
+const TOWERS = [[-30, -30, 20], [30, -30, 20], [-30, 30, 20], [30, 30, 20], [20, 4, 32], [-20, 4, 26], [-38, -16, 22]];
 function hogwarts(u, y, v) {
-  for (const [tx, tz, tall] of [[-30, -30, 20], [30, -30, 20], [-30, 30, 20], [30, 30, 20], [20, -12, 30], [-20, -12, 24]])
-    if (Math.hypot(u - tx, v - tz) <= 4) return turret(u, y, v, tx, tz, tall);
-  const h = hall(u, y, v), m = Math.max(Math.abs(u), Math.abs(v));
-  if (h !== undefined) return h;
-  if (m === 30) return v === 30 && Math.abs(u) <= 2 && y >= 1 && y <= 5 ? AIR : y < 8 ? STONEBRICK : y === 8 && (u + v) % 2 === 0 ? STONEBRICK : undefined;
-  return y === 0 && m < 30 && Math.abs(u) <= 1 && v > -2 ? STONEBRICK : undefined;
+  for (const [tx, tz, tall] of TOWERS) if (Math.hypot(u - tx, v - tz) <= 4) return turret(u, y, v, tx, tz, tall);
+  const au = Math.abs(u), m = Math.max(au, Math.abs(v));
+  if (v >= -28 && v <= -8 && au <= 10) return hall(u, y, v);
+  if (v >= -28 && v <= -8 && au >= 14 && au <= 28) return wing(Math.sign(u), au - 21, y, v + 18);
+  if (m === 30) return v === 30 && au <= 2 && y >= 1 && y <= 5 ? AIR : y < 8 ? (y === 5 && (u + v) % 6 === 0 ? LAMP : STONEBRICK) : y === 8 && (u + v) % 2 === 0 ? STONEBRICK : undefined;
+  return m < 30 ? yard(u, y, v) : grounds(u, y, v);
 }
 
 function castle(d, ox, oz, city) {
@@ -784,16 +891,29 @@ function house(d, cx, cz, city) {
   d[at(x1 - 1, h + 1, z1 - 1)] = CHEST;
   d[at(x0 + 1, h + 1, z0 + 1)] = ruin ? JUNGLE_LEAVES : BOOKSHELF;
   if (ruin) return;
-  d[at(x0 + 1, h + 1, z1 - 1)] = BED;
-  d[at(x1 - 1, h + 1, z0 + 1)] = TABLE;
+  furnish(d, x0, z0, x1, z1, h, tall);
   d[at(x0 + (w >> 1), h + tall, z0 + (dep >> 1))] = LAMP;
+}
+
+function furnish(d, x0, z0, x1, z1, h, tall) {
+  const mx = x0 + x1 >> 1, mz = z0 + z1 >> 1;
+  d[at(x1 - 1, h + 1, z0 + 1)] = TABLE;
+  d[at(x0 + 1, h + 1, z0 + 2)] = FURNACE;
+  fill(d, mx - 1, h, mz - 1, mx, h, mz, () => WOOL);
+  if (tall < 8) return void (d[at(x0 + 1, h + 1, z1 - 1)] = BED);
+  fill(d, x0 + 1, h + 4, z0 + 1, x1 - 1, h + 4, z1 - 1, (x, y, z) => x === x1 - 1 && z <= z0 + 3 ? AIR : SPRUCE_PLANKS);
+  for (let i = 2; i <= 3; i++) d[at(x1 - 1, h + i, z0 + i)] = SPRUCE_PLANKS;
+  d[at(mx, h + 3, mz)] = LAMP;
+  d[at(x0 + 1, h + 5, z1 - 1)] = BED;
+  d[at(x0 + 1, h + 5, z0 + 1)] = BOOKSHELF;
+  d[at(x0 + 2, h + 5, z1 - 1)] = CHEST;
 }
 
 function tower(d, cx, cz, city) {
   const h = city.h, k = hash(cx * 5, cz * 9), wall = PASTELS[k * 6 | 0], top = PASTELS[(k * 17 | 0) % 6];
   fill(d, 6, h, 6, 10, h + 12, 10, (x, y, z) => {
     if (y === h) return PLANKS;
-    if (x > 6 && x < 10 && z > 6 && z < 10) return AIR;
+    if (x > 6 && x < 10 && z > 6 && z < 10) return y - h <= 8 ? spiral(8 - x, 8 - z, y - h, 8, 4, PLANKS) : AIR;
     return (y - h) % 3 === 2 && (x === 8 || z === 8) ? GLASS : wall;
   });
   roof(d, 5, 5, 11, 11, h + 13, top);
@@ -1145,9 +1265,9 @@ flies.frustumCulled = false;
 scene.add(outline, crack, sun, moon, ambient, camera, clouds, stars, rainbow, flies, ...lamps);
 const STORM = new THREE.Color('#5d6b7c'), GREY = new THREE.Color(), WHITE = new THREE.Color('#ffffff'), HOT = '#d4520f', DAYSKY = new THREE.Color(SKY), NIGHTSKY = new THREE.Color('#0a0f24'), DEEP = new THREE.Color('#1c3d7a');
 
-const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, side: THREE.DoubleSide });
+const heldMat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, depthTest: false, transparent: true, side: THREE.DoubleSide });
 const SHADE = new THREE.Float32BufferAttribute([0.6, 0.6, 1, 0.3, 0.8, 0.45].flatMap(k => Array(12).fill(k)), 3);
-const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false }));
+const cube = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, depthTest: false, transparent: true }));
 cube.geometry.setAttribute('color', SHADE);
 const dropCube = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true }), drops = [];
 const flat = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), heldMat), itemGeos = new Map();
@@ -1214,12 +1334,19 @@ function moveAxis(a, d) {
   player.vel.y = 0;
 }
 
+function dismount() {
+  const p = player;
+  p.pos.copy(p.riding.g.position).x += 1.2;
+  p.riding = null;
+  p.soft = true;
+}
+
 function ride(dt) {
   const p = player, u = p.riding, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   u.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * 9;
   u.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * 9;
   if (f || s) u.yaw = Math.atan2(u.vel.x, u.vel.z);
-  if (keys.ShiftLeft && u.ground) { p.riding = null; p.pos.copy(u.g.position).x += 1.2; p.peak = -Infinity; return; }
+  if (keys.ShiftLeft && u.ground) return dismount();
   u.vel.y = keys.Space ? 7 : keys.ShiftLeft ? -6 : u.ground ? u.vel.y : Math.max(u.vel.y, -2.5);
   p.pos.copy(u.g.position).y += 1.2;
   p.vel.set(0, 0, 0);
@@ -1233,11 +1360,12 @@ function update(dt) {
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   const fluid = p.fly ? AIR : get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)), swim = FLUID.includes(fluid);
   const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (isLava(fluid) ? 0.4 : swim ? 0.6 : 1) * (effect('speed') ? 1.6 : 1);
-  p.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed;
-  p.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * speed;
+  const grip = p.ground && get(Math.floor(p.pos.x), Math.floor(p.pos.y - 0.1), Math.floor(p.pos.z)) === ICE ? Math.min(1, dt * 1.5) : 1;
+  p.vel.x += ((Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed - p.vel.x) * grip;
+  p.vel.z += ((-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * speed - p.vel.z) * grip;
   if (p.fly) p.vel.y = (key('Space') - key('ShiftLeft')) * speed;
   else if (keys.Space && p.ground) p.vel.y = effect('jump') ? 12 : 8.5;
-  else if (swim) p.vel.y = Math.max(p.vel.y - 10 * dt, keys.Space ? 4 : -2);
+  else if (swim) p.vel.y += ((keys.Space ? 2.2 : -1.5) - p.vel.y) * Math.min(1, dt * 4);
   else p.vel.y = Math.max(p.vel.y - 28 * dt, -40);
   const steps = Math.ceil(p.vel.length() * dt / 0.4);
   p.ground = false;
@@ -1402,10 +1530,11 @@ function updateBits(dt) {
 
 function place() {
   if (levi) return release();
+  if (player.riding) return dismount();
   const r = raycast(), p = player.pos, id = heldId(), t = aimAnimal(r);
   if (t?.shop) return openShop(t);
   if (t?.type === 'person') return talk(t);
-  if (t?.type === 'unicorn') { player.riding = t; award('unicorn'); return toast('In sella! Spazio per volare, Shift per scendere'); }
+  if (t?.type === 'unicorn') { player.riding = t; award('unicorn'); return toast('In sella! Spazio per volare, Shift per scendere · click destro per smontare'); }
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
