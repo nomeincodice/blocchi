@@ -1217,7 +1217,8 @@ function update(dt) {
 function vitals(dt, swim) {
   const p = player, at = dy => get(Math.floor(p.pos.x), Math.floor(p.pos.y + dy), Math.floor(p.pos.z));
   clock += dt;
-  if (p.ground && !p.fly && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
+  if (p.ground && !p.fly && !p.soft && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
+  if (p.ground) p.soft = false;
   p.peak = p.ground || p.fly || swim ? p.pos.y : Math.max(p.peak, p.pos.y);
   if ((isLava(at(0.1)) || isLava(at(1.2))) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
   air = isWater(at(1.62)) && !effect('breath') ? air - dt : Math.min(10, air + dt * 4);
@@ -1960,6 +1961,7 @@ scene.add(broom);
 
 function mount() {
   player.broom = !player.broom;
+  player.soft = true;
   award('broom');
   player.riding = null;
   player.fly = false;
