@@ -113,7 +113,7 @@
   <div class="gui stack"><div class="row head"><h2>Inventario</h2><button class="btn close">✕</button></div>
     <p>Clicca un oggetto nello zaino per prenderlo in mano · clicca un oggetto nella barra per rimetterlo nello zaino</p>
     <div class="row grid9 store"></div><div class="row grid9 hot"></div><div class="row all"></div>
-    <h2>Crafting</h2><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
+    <h2 class="craft-title">Crafting</h2><label class="row"><input type="checkbox" class="can"> Solo quello che posso fare</label><div class="stack cols recipes"></div></div>
 </div>
 <div class="panel stack chest" style="display: none">
   <div class="gui stack"><div class="row head"><h2>Baule</h2><button class="btn close">✕</button></div><div class="row grid9 box"></div><h3>Inventario</h3><div class="row grid9 pack"></div></div>
@@ -169,8 +169,10 @@ const WOOL = 109, BED = 110, PORK = 111, PORK_C = 112, BEEF = 113, BEEF_C = 114,
 const PINK = 129, LILAC = 130, MINT = 131, SKYBLUE = 132, LEMON = 133, PEACH = 134, PASTELS = [129, 130, 131, 132, 133, 134], ROAD = 135, ROAD_LINE = 136;
 const TALLGRASS = 125, POPPY = 126, DANDELION = 127, DEADBUSH = 128, TULIP = 137, CORNFLOWER = 138, ALLIUM = 139;
 const BUCKET = 140, WATER_BUCKET = 141, LAVA_BUCKET = 142, BUCKETS = [140, 141, 142];
-const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
-const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6 };
+const FURNACE = 165, CAULDRON = 166, FARMLAND = 167, HOE = 168, SEEDS = 169, WHEAT = 174, BREAD = 175, CARROT = 180, ROD = 181, FISH = 182, FISH_C = 183, OWL = 190;
+const CROPS = [170, 171, 172, 173, 176, 177, 178, 179], WHEAT_RIPE = 173, CARROT_RIPE = 179, STATIONS = [FURNACE, CAULDRON], SOWS = { [SEEDS]: 170, [CARROT]: 176 };
+const PLANTS = [125, 126, 127, 128, 137, 138, 139, 154, 155, ...CROPS], FLOWERS = [POPPY, DANDELION, TULIP, CORNFLOWER, ALLIUM];
+const SWORDS = [121, 122, 123, 124], FOOD = { [PORK]: 2, [PORK_C]: 6, [BEEF]: 2, [BEEF_C]: 7, [CHICKEN]: 2, [CHICKEN_C]: 5, [MUTTON]: 2, [MUTTON_C]: 6, [BREAD]: 5, [CARROT]: 3, [FISH]: 2, [FISH_C]: 6 };
 const CHERRY_LOG = 143, CHERRY_LEAVES = 144, CHERRY_PLANKS = 145, RED_SAND = 146, ORANGE_TC = 147, YELLOW_TC = 148, WHITE_TC = 149, BROWN_TC = 150;
 const DRY_GRASS = 151, ACACIA_LOG = 152, ACACIA_LEAVES = 153, RED_MUSHROOM = 154, BROWN_MUSHROOM = 155, ACACIA_PLANKS = 156, WAND = 157, ORB = 158, BROOM = 162, SNITCH = 163, SLATE = 164;
 const BANDS = [ORANGE_TC, TERRACOTTA, YELLOW_TC, WHITE_TC, BROWN_TC, ORANGE_TC, TERRACOTTA];
@@ -217,12 +219,12 @@ const RECIPES = [
   [{ [COBBLE]: 3, [STICK]: 2 }, SPICK, 1],
   [{ [COBBLE]: 3, [STICK]: 2 }, SAXE, 1],
   [{ [COBBLE]: 1, [STICK]: 2 }, SSHOVEL, 1],
-  [{ [IRON_ORE]: 1, [COAL]: 1 }, IRON, 1],
+  [{ [IRON_ORE]: 1, [COAL]: 1 }, IRON, 1, FURNACE],
   [{ [IRON]: 3, [STICK]: 2 }, IPICK, 1],
   [{ [IRON]: 3, [STICK]: 2 }, IAXE, 1],
   [{ [IRON]: 1, [STICK]: 2 }, ISHOVEL, 1],
-  [{ [SAND]: 1 }, GLASS, 1],
-  [{ [COBBLE]: 1 }, STONE, 1],
+  [{ [SAND]: 1 }, GLASS, 1, FURNACE],
+  [{ [COBBLE]: 1 }, STONE, 1, FURNACE],
   [{ [STONE]: 4 }, STONEBRICK, 4],
   [{ [DIRT]: 2, [SAND]: 2 }, BRICKS, 4],
   [{ [DIRT]: 1, [LEAVES]: 1 }, GRASS, 1],
@@ -233,15 +235,15 @@ const RECIPES = [
   [{ [BIRCH_LOG]: 1 }, BIRCH_PLANKS, 4],
   [{ [SPRUCE_LOG]: 1 }, SPRUCE_PLANKS, 4],
   [{ [JUNGLE_LOG]: 1 }, JUNGLE_PLANKS, 4],
-  [{ [GOLD_ORE]: 1, [COAL]: 1 }, GOLD, 1],
-  [{ [COPPER_ORE]: 1, [COAL]: 1 }, COPPER, 1],
+  [{ [GOLD_ORE]: 1, [COAL]: 1 }, GOLD, 1, FURNACE],
+  [{ [COPPER_ORE]: 1, [COAL]: 1 }, COPPER, 1, FURNACE],
   [{ [DIAMOND]: 3, [STICK]: 2 }, DPICK, 1],
   [{ [DIAMOND]: 3, [STICK]: 2 }, DAXE, 1],
   [{ [DIAMOND]: 1, [STICK]: 2 }, DSHOVEL, 1],
   [{ [SAND]: 4 }, SANDSTONE, 1],
   [{ [COBBLE]: 1, [LEAVES]: 1 }, MOSSY, 1],
-  [{ [STONE]: 1, [COAL]: 1 }, SMOOTH, 1],
-  [{ [CLAY]: 1, [COAL]: 1 }, TERRACOTTA, 1],
+  [{ [STONE]: 1, [COAL]: 1 }, SMOOTH, 1, FURNACE],
+  [{ [CLAY]: 1, [COAL]: 1 }, TERRACOTTA, 1, FURNACE],
   [{ [SNOW]: 4 }, ICE, 1],
   [{ [REDSTONE]: 4, [TORCH]: 1 }, GLOWSTONE, 1],
   [{ [WOOL]: 3, [PLANKS]: 3 }, BED, 1],
@@ -249,10 +251,10 @@ const RECIPES = [
   [{ [COBBLE]: 2, [STICK]: 1 }, SWORDS[1], 1],
   [{ [IRON]: 2, [STICK]: 1 }, SWORDS[2], 1],
   [{ [DIAMOND]: 2, [STICK]: 1 }, SWORDS[3], 1],
-  [{ [PORK]: 1, [COAL]: 1 }, PORK_C, 1],
-  [{ [BEEF]: 1, [COAL]: 1 }, BEEF_C, 1],
-  [{ [CHICKEN]: 1, [COAL]: 1 }, CHICKEN_C, 1],
-  [{ [MUTTON]: 1, [COAL]: 1 }, MUTTON_C, 1],
+  [{ [PORK]: 1, [COAL]: 1 }, PORK_C, 1, FURNACE],
+  [{ [BEEF]: 1, [COAL]: 1 }, BEEF_C, 1, FURNACE],
+  [{ [CHICKEN]: 1, [COAL]: 1 }, CHICKEN_C, 1, FURNACE],
+  [{ [MUTTON]: 1, [COAL]: 1 }, MUTTON_C, 1, FURNACE],
   [{ [IRON]: 3 }, BUCKET, 1],
   [{ [CHERRY_LOG]: 1 }, CHERRY_PLANKS, 4],
   [{ [ACACIA_LOG]: 1 }, ACACIA_PLANKS, 4],
@@ -264,7 +266,21 @@ const RECIPES = [
   [{ [WOOL]: 1, [POPPY]: 1 }, PEACH, 1],
   [{ [STICK]: 1, [FEATHER]: 1 }, WAND, 1],
   [{ [STICK]: 3, [LEAVES]: 2 }, BROOM, 1],
+  [{ [COBBLE]: 8 }, FURNACE, 1],
+  [{ [IRON]: 7 }, CAULDRON, 1],
+  [{ [PLANKS]: 2, [STICK]: 2 }, HOE, 1],
+  [{ [WHEAT]: 3 }, BREAD, 1],
+  [{ [STICK]: 3, [WOOL]: 1 }, ROD, 1],
+  [{ [FISH]: 1, [COAL]: 1 }, FISH_C, 1, FURNACE],
+  [{ [RED_SAND]: 1 }, GLASS, 1, FURNACE],
 ];
+const POTIONS = [
+  ['speed', 'Pozione di velocità', [120, 200, 255], { [FEATHER]: 1, [REDSTONE]: 1 }], ['jump', 'Pozione del salto', [120, 255, 140], { [RED_MUSHROOM]: 1, [EMERALD]: 1 }],
+  ['breath', 'Pozione di Algabranchia', [40, 110, 255], { [JUNGLE_LEAVES]: 1, [LAPIS]: 1 }], ['night', 'Pozione della notte chiara', [70, 50, 170], { [CARROT]: 1, [GLOWSTONE]: 1 }],
+  ['luck', 'Felix Felicis', [255, 210, 60], { [GOLD]: 1, [DANDELION]: 1 }], ['heal', 'Pozione curativa', [255, 90, 120], { [MELON]: 1, [POPPY]: 1 }],
+];
+const POTION_OF = Object.fromEntries(POTIONS.map(([k], i) => [184 + i, k]));
+for (const [i, [, , , need]] of POTIONS.entries()) RECIPES.push([{ ...need, [GLASS]: 1 }, 184 + i, 1, CAULDRON]);
 for (const [m, b] of [[IRON, IRON_BLOCK], [GOLD, GOLD_BLOCK], [DIAMOND, DIAMOND_BLOCK], [REDSTONE, REDSTONE_BLOCK], [LAPIS, LAPIS_BLOCK], [EMERALD, EMERALD_BLOCK], [COPPER, COPPER_BLOCK], [COAL, COAL_BLOCK]])
   RECIPES.push([{ [m]: 9 }, b, 1], [{ [b]: 1 }, m, 9]);
 const solid = b => b && !FLUID.includes(b) && !TORCHES.includes(b) && !PLANTS.includes(b) && !(isDoor(b) && b - 40 & 4) && b !== ORB;
@@ -438,6 +454,24 @@ item(WAND, 'Bacchetta magica', (x, y) => (x + y === 15 || x + y === 16) && x > 2
 item(SNITCH, "Boccino d'oro", (x, y) => Math.hypot(x - 7.5, y - 8.5) < 3 ? jit([250, 205, 50], 0.08) : y > 3 && y < 9 && (x < 5 || x > 10) && Math.abs(y - 7 + Math.abs(x - 7.5) * 0.4) < 1.6 ? jit([245, 245, 240], 0.03) : NONE);
 item(BROOM, 'Scopa volante', (x, y) => x < 6 && y > 9 && Math.abs(x + y - 15.5) < 3.5 ? jit([205, 170, 90], 0.12) : (x + y === 15 || x + y === 16) && x < 15 ? jit(x === 6 ? [150, 40, 40] : [120, 80, 45], 0.06) : NONE);
 add(SLATE, 'Ardesia', same((x, y) => jit(dim([70, 78, 96], y % 4 === 3 || (x + (y >> 2) * 3) % 6 === 0 ? 0.75 : 1), 0.06)), [6, 'pick', 1]);
+add(FURNACE, 'Fornace', [T(() => jit(dim(C.stone, 0.9), 0.06)), 4, T((x, y) => x > 3 && x < 12 && y > 7 && y < 13 ? (y > 10 ? jit(C.flame, 0.15) : jit([30, 30, 30])) : TILES[4](x, y))], [6, 'pick', 1]);
+add(CAULDRON, 'Calderone', [T((x, y) => x < 2 || x > 13 || y < 2 || y > 13 ? jit([55, 55, 60]) : jit([110, 70, 190], 0.15)), T(() => jit([55, 55, 60])), T((x, y) => jit(dim([60, 60, 66], y % 5 === 0 ? 0.75 : 1), 0.05))], [5, 'pick', 1]);
+add(FARMLAND, 'Terra arata', [T((x, y) => jit(dim(C.dirt, y % 4 < 2 ? 0.55 : 0.72))), 2, 2], [0.75, 'shovel'], DIRT);
+item(HOE, 'Zappa', TOOLTILE((x, y) => (y === 2 || y === 3) && x >= 6 && x <= 12 || x >= 11 && x <= 12 && y <= 5 && y >= 2, TOOL[2]));
+item(SEEDS, 'Semi', (x, y) => [[5, 8], [9, 6], [8, 11], [11, 10], [6, 12], [12, 7]].some(([a, b]) => y === b && Math.abs(x - a) <= 1) ? jit([210, 190, 100]) : NONE);
+const CROP = (k, leaf, fruit, top) => same((x, y) => (x % 3 === 1 || x % 5 === 3) && y > 13 - k * 3.5 ? jit(fruit && (top ? y < 17 - k * 3.5 : y > 13) ? fruit : leaf, 0.12) : NONE);
+[0, 1, 2, 3].forEach(k => add(170 + k, 'Grano', CROP(k, k === 3 ? [190, 170, 70] : [70, 150, 40], k === 3 && [225, 195, 85], true), [0], k === 3 ? WHEAT : SEEDS));
+[0, 1, 2, 3].forEach(k => add(176 + k, 'Carote', CROP(Math.min(k, 2), [60, 160, 50], k === 3 && [240, 130, 30], false), [0], CARROT));
+item(WHEAT, 'Grano', (x, y) => (x % 3 === 1 || x % 4 === 2) && y > 2 && y < 15 ? jit(y < 7 ? [225, 195, 85] : [190, 170, 70], 0.1) : NONE);
+item(BREAD, 'Pane', (x, y) => Math.hypot((x - 7.5) / 1.4, y - 9) < 4.2 ? jit(y < 8 ? [200, 140, 70] : [170, 110, 50], 0.08) : NONE);
+item(CARROT, 'Carota', (x, y) => Math.abs(x + y - 16) <= 1.5 - (x - 4) * 0.12 && x > 3 && x < 12 ? jit([240, 130, 30], 0.08) : x >= 11 && y <= 5 && (x + y) % 2 ? jit([60, 160, 50]) : NONE);
+item(ROD, 'Canna da pesca', (x, y) => (x + y === 15 || x + y === 16) && x < 14 ? jit([120, 80, 45], 0.06) : x === 14 && y >= 2 && y <= 12 ? [235, 235, 235] : x === 13 && y === 12 ? [140, 140, 140] : NONE);
+const FISHY = c => (x, y) => Math.hypot((x - 7) / 1.6, y - 8) < 3.6 ? jit(c, 0.08) : x >= 11 && x <= 13 && Math.abs(y - 8) <= x - 10 ? jit(dim(c, 0.8)) : NONE;
+item(FISH, 'Pesce crudo', FISHY([120, 160, 190]));
+item(FISH_C, 'Pesce cotto', FISHY([200, 140, 80]));
+const BOTTLE = c => (x, y) => y < 2 && x >= 6 && x <= 9 ? jit([150, 110, 70]) : x >= 6 && x <= 9 && y <= 5 ? jit([220, 235, 245], 0.03) : Math.hypot(x - 7.5, y - 10) < 4.6 ? (y > 8 ? jit(c, 0.1) : jit([220, 235, 245], 0.03)) : NONE;
+POTIONS.forEach(([, name, c], i) => item(184 + i, name, BOTTLE(c)));
+item(OWL, 'Gufo', (x, y) => Math.hypot(x - 7.5, y - 8.5) < 6 ? jit(Math.hypot(Math.abs(x - 7.5) - 2.5, y - 7) < 1.6 ? (Math.hypot(Math.abs(x - 7.5) - 2.5, y - 7) < 0.8 ? [20, 20, 20] : [255, 205, 0]) : y > 11 ? [240, 225, 200] : [140, 105, 70], 0.06) : NONE);
 add(ORB, 'Luce magica', same((x, y) => jit(Math.hypot(x - 7.5, y - 7.5) < 4 ? [255, 255, 255] : [190, 225, 255], 0.04)), [0]);
 DROP[TALLGRASS] = DROP[DEADBUSH] = DROP[ORB] = AIR;
 const IDS = NAMES.map((_, id) => id);
@@ -697,7 +731,7 @@ function role(cx, cz, city) {
   if (city.castle) return castle;
   if (cx * CS === city.cx && cz * CS === city.cz) return plaza;
   if (!city.ruin && cx * CS === city.cx + CS && Math.abs(cz * CS - city.cz) <= CS) return pitch;
-  return city.ruin ? (r < 0.3 ? park : house) : r < 0.14 ? shop : r < 0.24 ? statue : r < 0.34 ? park : r < 0.5 ? tower : house;
+  return city.ruin ? (r < 0.3 ? park : house) : r < 0.14 ? shop : r < 0.24 ? statue : r < 0.34 ? park : r < 0.5 ? tower : r < 0.6 ? farm : house;
 }
 
 function house(d, cx, cz, city) {
@@ -759,6 +793,12 @@ function pitch(d, ox, oz, city) {
     fill(d, x, h + 1, goal, x, h + top, goal, () => GOLD_BLOCK);
     for (let a = 0; a < 16; a++) d[at(x + Math.round(Math.cos(a / 16 * Math.PI * 2) * 2), h + top + 2 + Math.round(Math.sin(a / 16 * Math.PI * 2) * 2), goal)] = GOLD_BLOCK;
   }
+}
+
+function farm(d, ox, oz, city) {
+  const h = city.h, crop = hash(ox, oz) < 0.5 ? WHEAT_RIPE : CARROT_RIPE;
+  fill(d, 4, h, 4, 14, h, 14, (x, y, z) => z === 9 ? WATER : x === 4 || x === 14 || z === 4 || z === 14 ? LOG : FARMLAND);
+  fill(d, 5, h + 1, 5, 13, h + 1, 13, (x, y, z) => z === 9 ? undefined : crop);
 }
 
 function plaza(d, cx, cz, city) {
@@ -1107,8 +1147,8 @@ camera.add(hand);
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), ground: false, fly: false, yaw: 0, pitch: 0, peak: -Infinity };
 const keys = {}, key = c => keys[c] ? 1 : 0, $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('blocchi-save') ?? 'null'), slots = saved?.slots ?? Array(36).fill(null);
-const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id));
-const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) || id === WAND || id === BROOM ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
+const ITEMS = IDS.filter(id => ICON[id] !== undefined && !FLUID.includes(id) && !WALL[id] && !isDoor(id) && !CROPS.includes(id));
+const MAX = id => TOOL_IDS.includes(id) || SWORDS.includes(id) || BUCKETS.includes(id) || [WAND, BROOM, HOE, ROD].includes(id) ? 1 : 64, count = id => slots.reduce((t, s) => t + (s?.id === id ? s.n : 0), 0);
 const heldId = () => slots[sel]?.id ?? 0;
 const joy = { x: 0, y: 0 }, drags = new Map(), mining = { target: '', p: 0, tick: 0 };
 const chests = JSON.parse(localStorage.getItem('blocchi-chests') ?? '{}'), history = [], locks = new Set(saved?.locks);
@@ -1117,7 +1157,8 @@ let caught = saved?.caught ?? 0, snitch = null, coins = saved?.coins ?? 0, shopp
 const animals = [], aim = new THREE.Raycaster(), center = new THREE.Vector2();
 let hp = saved?.hp ?? 20, air = 10, clock = 0, hurtAt = -9, burnAt = 0;
 let mode = saved?.mode ?? 'survival', spaceAt = 0, flowT = 0, sel = 0, held = -1, swing = 0, wheel = 0, wheelAt = 0, time = saved?.time ?? DAY * 0.05, playing = false;
-let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0;
+let mana = 20, lumos = false, levi = null, patronus = null, checkT = 0, station = null, bob = null;
+const effects = {}, effect = k => effects[k] > clock, crops = new Set(saved?.crops);
 let quest = saved?.quest ?? null, done = saved?.done ?? 0, tipAt = saved?.tip ?? 0;
 const got = new Set(saved?.trophies), spellsCast = new Set(saved?.spellsCast);
 
@@ -1159,11 +1200,11 @@ function update(dt) {
   if (player.broom) return soar(dt);
   const p = player, f = key('KeyW') - key('KeyS') - joy.y, s = key('KeyD') - key('KeyA') + joy.x, len = Math.max(1, Math.hypot(f, s));
   const fluid = p.fly ? AIR : get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.1), Math.floor(p.pos.z)), swim = FLUID.includes(fluid);
-  const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (isLava(fluid) ? 0.4 : swim ? 0.6 : 1);
+  const speed = (p.fly ? 11 : keys.ShiftLeft ? 9 : 4.3) * (isLava(fluid) ? 0.4 : swim ? 0.6 : 1) * (effect('speed') ? 1.6 : 1);
   p.vel.x = (Math.cos(p.yaw) * s - Math.sin(p.yaw) * f) / len * speed;
   p.vel.z = (-Math.sin(p.yaw) * s - Math.cos(p.yaw) * f) / len * speed;
   if (p.fly) p.vel.y = (key('Space') - key('ShiftLeft')) * speed;
-  else if (keys.Space && p.ground) p.vel.y = 8.5;
+  else if (keys.Space && p.ground) p.vel.y = effect('jump') ? 12 : 8.5;
   else if (swim) p.vel.y = Math.max(p.vel.y - 10 * dt, keys.Space ? 4 : -2);
   else p.vel.y = Math.max(p.vel.y - 28 * dt, -40);
   const steps = Math.ceil(p.vel.length() * dt / 0.4);
@@ -1178,7 +1219,7 @@ function vitals(dt, swim) {
   if (p.ground && !p.fly && p.peak - p.pos.y > 3.5) hurt(Math.floor(p.peak - p.pos.y - 3));
   p.peak = p.ground || p.fly || swim ? p.pos.y : Math.max(p.peak, p.pos.y);
   if ((isLava(at(0.1)) || isLava(at(1.2))) && clock - burnAt > 0.5) { burnAt = clock; hurt(3); }
-  air = isWater(at(1.62)) ? air - dt : Math.min(10, air + dt * 4);
+  air = isWater(at(1.62)) && !effect('breath') ? air - dt : Math.min(10, air + dt * 4);
   if (air < 0) { air += 1; hurt(2); }
   if (clock - hurtAt > 4) hp = Math.min(20, hp + dt / 2);
   mana = Math.min(20, mana + dt * 0.8);
@@ -1330,6 +1371,7 @@ function place() {
   if (r && get(...r.hit) === CHEST) return openChest(r.hit);
   if (r && isDoor(get(...r.hit))) return toggleDoor(r.hit);
   if (r && get(...r.hit) === BED) return sleep(r.hit);
+  if (use(id, r, t)) return;
   if (id === BROOM || player.broom) return mount();
   if (FOOD[id]) return eat(id);
   if (BUCKETS.includes(id)) return pour(id, r);
@@ -1398,7 +1440,9 @@ function toggleDoor([x, y, z]) {
 function dig([x, y, z]) {
   const id = get(x, y, z), key = [x, y, z].join();
   const out = isDoor(id) ? DOOR : DROP[id] ?? id, above = get(x, y + 1, z);
-  if (out && mode !== 'creative') drop(out, 1, x + 0.5, y + 0.5, z + 0.5);
+  if (out && mode !== 'creative') drop(out, effect('luck') ? 2 : 1, x + 0.5, y + 0.5, z + 0.5);
+  const bonus = id === TALLGRASS && rnd() < 0.15 ? [SEEDS, 1] : id === WHEAT_RIPE ? [SEEDS, 1 + (rnd() * 2 | 0)] : id === CARROT_RIPE ? [CARROT, 1 + (rnd() * 3 | 0)] : null;
+  if (bonus && mode !== 'creative') drop(...bonus, x + 0.5, y + 0.5, z + 0.5);
   if (PLANTS.includes(above) || above === TORCH) { if (DROP[above] ?? above) drop(DROP[above] ?? above, 1, x + 0.5, y + 1.5, z + 0.5); set(x, y + 1, z, AIR, false); }
   sound(tone(id), 0.35, 0.22);
   const other = y + (id - 40 & 8 ? -1 : 1);
@@ -1458,6 +1502,7 @@ const ANIMALS = {
   cow: { color: ['#4a3426', '#dcdcdc'], body: [0.75, 0.7, 1.1, 0.95], head: [0.5, 0.5, 0.4, 1.15], leg: [0.24, 0.6], hp: 8, drops: [[BEEF, 1, 3], [LEATHER, 0, 2]] },
   sheep: { color: ['#eeeeee', '#c9b8a6'], body: [0.8, 0.7, 1.05, 0.9], head: [0.4, 0.42, 0.45, 1.1], leg: [0.2, 0.55], hp: 6, drops: [[WOOL, 1, 2], [MUTTON, 1, 2]] },
   chicken: { color: ['#f4f4f4', '#e8a33c'], body: [0.35, 0.35, 0.45, 0.45], head: [0.25, 0.3, 0.2, 0.75], leg: [0.06, 0.3], hp: 3, drops: [[CHICKEN, 1, 1], [FEATHER, 0, 2]], extras: [[0.12, 0.08, 0.12, 0.74, 0.42, '#e8a33c']] },
+  dog: { color: ['#c8a27a', '#8b5a2b'], body: [0.4, 0.4, 0.8, 0.55], head: [0.36, 0.36, 0.36, 0.78], leg: [0.14, 0.35], hp: 10, drops: [], extras: [[0.08, 0.08, 0.35, 0.72, -0.5, '#8b5a2b'], [0.16, 0.12, 0.14, 0.72, 0.72, '#3a2a1a']] },
   unicorn: { color: ['#fdfaff', '#fdfaff'], body: [0.7, 0.75, 1.4, 1.25], head: [0.42, 0.5, 0.75, 1.85], leg: [0.22, 0.9], hp: 99, drops: [],
     extras: [[0.09, 0.5, 0.09, 2.35, 1.2, '#ffd84d'], ...RAINBOW.flatMap((c, i) => [[0.16, 0.2, 0.16, 2.02 - i * 0.1, 0.55 - i * 0.1, c], [0.16, 0.22, 0.16, 1.4 - i * 0.1, -0.75 - i * 0.03, c]])] },
 };
@@ -1486,9 +1531,9 @@ const PRICE = {
   [DIRT]: 1, [COBBLE]: 1, [STONE]: 1, [SAND]: 1, [LOG]: 2, [BIRCH_LOG]: 2, [SPRUCE_LOG]: 2, [JUNGLE_LOG]: 2, [COAL]: 3, [IRON_ORE]: 5, [IRON]: 8,
   [GOLD_ORE]: 8, [GOLD]: 12, [COPPER]: 5, [DIAMOND]: 40, [EMERALD]: 30, [REDSTONE]: 4, [LAPIS]: 4, [WOOL]: 3, [PORK]: 2, [BEEF]: 2, [CHICKEN]: 2,
   [MUTTON]: 2, [PORK_C]: 4, [BEEF_C]: 5, [CHICKEN_C]: 4, [MUTTON_C]: 4, [LEATHER]: 3, [PUMPKIN]: 3, [MELON]: 3, [GLASS]: 2, [BED]: 12, [BUCKET]: 25,
-  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15, [BROOM]: 20, [SNITCH]: 50,
+  [WATER_BUCKET]: 27, [GLOWSTONE]: 10, [LAMP]: 8, [CHEST]: 10, [SPICK]: 8, [IPICK]: 30, [DPICK]: 130, [SWORDS[2]]: 20, [SWORDS[3]]: 90, [TORCH]: 1, [WAND]: 15, [BROOM]: 20, [SNITCH]: 50, [OWL]: 60, [SEEDS]: 1, [WHEAT]: 1, [BREAD]: 3, [CARROT]: 2, [FISH]: 2, [FISH_C]: 4, [ROD]: 8, [HOE]: 5, [FURNACE]: 8, [CAULDRON]: 25, ...Object.fromEntries(POTIONS.map((_, i) => [184 + i, 15])),
 };
-const STOCK = [WAND, BROOM, TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
+const STOCK = [WAND, BROOM, OWL, SEEDS, CARROT, ROD, HOE, FURNACE, CAULDRON, 184, 185, 186, 187, 188, 189, TORCH, BED, BUCKET, WATER_BUCKET, BEEF_C, PORK_C, IRON, GOLD, DIAMOND, EMERALD, GLOWSTONE, LAMP, CHEST, SPICK, IPICK, DPICK, SWORDS[2], SWORDS[3], ...PASTELS, GLASS];
 const value = id => PRICE[id] ?? 1;
 const PHRASES = ['Ciao!', 'Che bella giornata!', 'Hai visto gli unicorni? Si possono cavalcare!', 'Attento alle macchine!', 'Ti piace la nostra città?',
   'Di notte escono le lucciole ✨', 'Sto andando a fare la spesa', 'Adoro i fiori lilla', 'Hai già un letto? Di notte si dorme!', 'Nelle grotte ci sono bauli pieni di tesori'];
@@ -1533,13 +1578,13 @@ function spawnAnimal() {
   if (animals.length >= 12 || !chunks.get(ck(Math.floor(x / CS), Math.floor(z / CS)))?.mesh) return;
   let y = H - 1;
   while (y > 0 && !get(x, y, z)) y--;
-  const all = ['pig', 'cow', 'sheep', 'chicken', 'unicorn'];
-  const kinds = [all, all, [], ['chicken', 'pig'], ['sheep'], ['sheep'], ['cow', 'sheep'], [], ['chicken', 'pig'], ['sheep', 'unicorn', 'unicorn'], ['cow', 'sheep', 'unicorn']][biome(x, z)];
+  const all = ['pig', 'cow', 'sheep', 'chicken', 'unicorn', 'dog'];
+  const kinds = [all, all, [], ['chicken', 'pig'], ['sheep', 'dog'], ['sheep'], ['cow', 'sheep'], [], ['chicken', 'pig'], ['sheep', 'unicorn', 'unicorn'], ['cow', 'sheep', 'unicorn']][biome(x, z)];
   if (kinds.length && [GRASS, SNOW, DRY_GRASS].includes(get(x, y, z))) makeAnimal(kinds[rnd() * kinds.length | 0], x + 0.5, y + 1, z + 0.5);
 }
 
 function stepAnimal(a, dt) {
-  const p = a.g.position, speed = a.walk ? (a.flee > 0 ? 3.5 : 1.2) : 0, fy = Math.floor(p.y + 0.1);
+  const p = a.g.position, speed = a.walk ? (a.flee > 0 || a.pet ? 4.5 : 1.2) : 0, fy = Math.floor(p.y + 0.1);
   const nx = p.x + (Math.sin(a.yaw) * speed + a.vel.x) * dt, nz = p.z + (Math.cos(a.yaw) * speed + a.vel.z) * dt, bx = Math.floor(nx), bz = Math.floor(nz);
   if (!solid(get(bx, fy, bz)) && !solid(get(bx, fy + 1, bz))) { p.x = nx; p.z = nz; }
   else if (a.ground && !solid(get(bx, fy + 1, bz)) && !solid(get(bx, fy + 2, bz))) a.vel.y = 6.5;
@@ -1562,6 +1607,7 @@ function updateAnimals(dt) {
     a.timer -= dt;
     a.flee -= dt;
     a.hurt -= dt;
+    if (a.type === 'owl') { hover(a, dt); continue; }
     if (a === player.riding) { a.walk = false; if (dt) stepAnimal(a, dt); continue; }
     if (a === levi?.a) continue;
     if (a.timer < 0) {
@@ -1569,12 +1615,13 @@ function updateAnimals(dt) {
       if (a.city && Math.hypot(a.g.position.x - a.city.cx, a.g.position.z - a.city.cz) > 40) { a.walk = true; a.yaw = Math.atan2(a.city.cx - a.g.position.x, a.city.cz - a.g.position.z); }
     }
     if (a.shop) { a.walk = false; a.yaw = Math.PI; if (a.act === 'dance') a.act = ''; }
+    if (a.pet) follow(a);
     if (a.type === 'unicorn' && rnd() < dt * 5) sparkle(a.g.position);
     if (a.flee > 0) a.walk = true;
     for (const m of a.mats) m.emissive.setRGB(a.hurt > 0 ? 0.6 : 0, 0, 0);
     if (dt) stepAnimal(a, dt);
     if (a.arms) perform(a);
-    if (a.hp <= 0 || a.g.position.distanceTo(player.pos) > 70) removeAnimal(a);
+    if (a.hp <= 0 || !a.pet && a.g.position.distanceTo(player.pos) > 70) removeAnimal(a);
   }
 }
 
@@ -1835,6 +1882,10 @@ function incendio(r, to) {
 }
 
 function herbivicus(r) {
+  if (r && CROPS.includes(get(...r.hit))) {
+    ball(r.hit, 3, (x, y, z) => { const k = CROPS.indexOf(get(x, y, z)); if (k >= 0) set(x, y, z, CROPS[k - k % 4 + 3], false); });
+    return void flush();
+  }
   const [x, top, z] = r?.hit ?? [], y = PLANTS.includes(get(x, top, z)) ? top : top + 1, d = new Uint8Array(CS * CS * H);
   if (!r || !SOIL.includes(get(x, y - 1, z)) || solid(get(x, y, z))) return 'Punta la bacchetta sulla terra';
   if (y + 16 >= H) return 'Quassù non cresce niente';
@@ -2010,8 +2061,10 @@ const TROPHIES = {
   buy: ['🛒 Primo acquisto', 'Compra qualcosa in un negozio'], rich: ['🪙 Ricco sfondato', 'Accumula 500 monete'], mission: ['📜 Ben fatto', 'Completa una missione'],
   missions: ['🎖️ Eroe della città', 'Completa 10 missioni'], pyramid: ['🔺 Faraone', 'Trova una piramide nel deserto'], temple: ['🛕 Esploratore', 'Trova un tempio nella giungla'],
   ruin: ['🗿 Archeologo', 'Trova una torre in rovina'], treasure: ['💰 Tesoro!', 'Apri un baule del tesoro'], hogwarts: ['🏰 Benvenuto a Hogwarts', 'Trova il castello'],
+  furnace: ['🔥 Fornaio', 'Costruisci una fornace'], harvest: ['🌾 Contadino', 'Raccogli il grano maturo'], bread: ['🍞 Panettiere', 'Fai il pane'],
+  potion: ['🧪 Pozionista', 'Prepara una pozione nel calderone'], fish: ['🎣 Pescatore', 'Pesca un pesce'], pet: ['🐶 Migliore amico', 'Fai amicizia con un cane'], owl: ['🦉 Posta via gufo', 'Prendi un gufo'],
 };
-const FIRST = { [IRON]: 'iron', [DIAMOND]: 'diamond', [WAND]: 'wand', ...Object.fromEntries([...LOGS.map(id => [id, 'wood']), ...TOOLS.pick.map(id => [id, 'pick'])]) };
+const FIRST = { [IRON]: 'iron', [DIAMOND]: 'diamond', [WAND]: 'wand', [FURNACE]: 'furnace', [WHEAT]: 'harvest', [BREAD]: 'bread', [FISH]: 'fish', ...Object.fromEntries(POTIONS.map((_, i) => [184 + i, 'potion'])), ...Object.fromEntries([...LOGS.map(id => [id, 'wood']), ...TOOLS.pick.map(id => [id, 'pick'])]) };
 const TIPS = [
   [touch ? 'Muoviti col pollice sinistro e guardati intorno col destro' : 'Muoviti con WASD e guardati intorno col mouse', () => bobT > 12],
   [touch ? 'Tieni premuto ⛏️ su un albero per prendere un tronco' : 'Tieni premuto il click sinistro su un albero per prendere un tronco', () => LOGS.some(id => count(id))],
@@ -2020,7 +2073,7 @@ const TIPS = [
   ['Crafta la bacchetta (bastone + piuma delle galline) e lancia Lumos', () => got.has('spell')],
   [`Cerca una città e parla con le persone per le missioni · ${touch ? '🗺️' : 'M'} apre la mappa`, () => got.has('mission')],
 ];
-const WANTS = [[LOG, 10], [COBBLE, 20], [COAL, 8], [IRON, 3], [WOOL, 3], [PORK_C, 2], [POPPY, 3], [DIAMOND, 1], [SNITCH, 1], [GLASS, 6], [PUMPKIN, 2], [EMERALD, 1], [GOLD, 2], [FEATHER, 4]];
+const WANTS = [[LOG, 10], [COBBLE, 20], [COAL, 8], [IRON, 3], [WOOL, 3], [PORK_C, 2], [POPPY, 3], [DIAMOND, 1], [SNITCH, 1], [GLASS, 6], [PUMPKIN, 2], [EMERALD, 1], [GOLD, 2], [FEATHER, 4], [WHEAT, 10], [BREAD, 3], [FISH, 3], [CARROT, 5]];
 
 function award(k) {
   if (got.has(k)) return;
@@ -2113,6 +2166,140 @@ function drawMarks(g, px, pz) {
   for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const [gx, gz] = castleCell(fx + i, fz + j), c = cityAt(gx * CITY + 128, gz * CITY + 128); if (c?.castle) near.push(c); }
   const c = near.sort((a, b) => Math.hypot(a.cx - px, a.cz - pz) - Math.hypot(b.cx - px, b.cz - pz))[0];
   $('.far').textContent = c ? `🏰 Hogwarts: ${Math.round(Math.hypot(c.cx - px, c.cz - pz))} m verso ${['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ovest', 'ovest', 'nord-ovest'][Math.round(Math.atan2(c.cx - px, pz - c.cz) / (Math.PI / 4)) & 7]}` : '';
+}
+
+const MEATS = [PORK, PORK_C, BEEF, BEEF_C, CHICKEN, CHICKEN_C, MUTTON, MUTTON_C], EFFECT_ICON = { speed: '💨', jump: '🐇', breath: '🫧', night: '🌙', luck: '🍀' };
+const useUp = () => { if (!is('infinite') && !--slots[sel].n) slots[sel] = null; swing ||= 0.01; drawInv(); };
+const nearby = id => { const [px, py, pz] = player.pos.toArray().map(Math.floor); for (let x = -4; x <= 4; x++) for (let y = -2; y <= 3; y++) for (let z = -4; z <= 4; z++) if (get(px + x, py + y, pz + z) === id) return true; return false; };
+
+function use(id, r, t) {
+  const hit = r && get(...r.hit);
+  if (STATIONS.includes(hit)) return openMenu('craft', hit) ?? true;
+  if (t?.type === 'dog') return befriend(t, id) ?? true;
+  if (id === HOE && r) return till(r) ?? true;
+  if (SOWS[id] && hit === FARMLAND && r.prev?.[1] === r.hit[1] + 1 && !get(...r.prev)) return sow(r.prev, SOWS[id]) ?? true;
+  if (id === ROD) return fish() ?? true;
+  if (POTION_OF[id]) return drink(id) ?? true;
+  if (id !== OWL) return false;
+  adopt('owl', choice(['Edvige', 'Errol', 'Leotordo', 'Piuma']));
+  useUp();
+  award('owl');
+  toast('🦉 Il tuo gufo ti seguirà e ogni tanto ti porterà dei regali');
+  return true;
+}
+
+function till(r) {
+  if (![GRASS, DIRT, DRY_GRASS].includes(get(...r.hit)) || solid(get(r.hit[0], r.hit[1] + 1, r.hit[2]))) return;
+  set(...r.hit, FARMLAND);
+  sound(450, 0.3, 0.15);
+  swing ||= 0.01;
+}
+
+function sow(at, crop) {
+  set(...at, crop);
+  crops.add(at.join());
+  sound(1200, 0.2, 0.1);
+  useUp();
+}
+
+function grow() {
+  for (const k of crops) {
+    const [x, y, z] = k.split(',').map(Number);
+    if (!chunks.has(ck(Math.floor(x / CS), Math.floor(z / CS)))) continue;
+    const stage = CROPS.indexOf(get(x, y, z));
+    if (stage < 0) crops.delete(k);
+    else if (stage % 4 < 3 && rnd() < 0.03) set(x, y, z, CROPS[stage + 1]);
+  }
+}
+
+function drink(id) {
+  const k = POTION_OF[id];
+  useUp();
+  if (k === 'heal') hp = 20; else effects[k] = clock + 90;
+  sound(1600, 0.25, 0.4);
+  toast(`🧪 ${NAMES[id]}${k === 'heal' ? '' : ' · 90 secondi'}`);
+}
+
+function fish() {
+  if (bob) return reel();
+  const w = raycast(true, 14);
+  if (!w || get(...w.hit) !== WATER) return toast('🎣 Lancia la lenza in acqua');
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18), lambert('#e03131')), line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: '#dddddd' }));
+  mesh.geometry.setAttribute('color', SHADE);
+  line.frustumCulled = false;
+  mesh.position.set(w.hit[0] + 0.5, w.hit[1] + 0.95, w.hit[2] + 0.5);
+  scene.add(mesh, line);
+  bob = { mesh, line, y: mesh.position.y, bite: clock + 3 + rnd() * 7 };
+  swing ||= 0.01;
+  sound(900, 0.2, 0.2);
+}
+
+function reel() {
+  const hooked = clock > bob.bite && clock < bob.bite + 1.5, id = rnd() < 0.08 ? choice([EMERALD, GOLD, DIAMOND, SNITCH]) : FISH;
+  if (hooked) drop(id, 1, player.pos.x, player.pos.y + 1, player.pos.z);
+  toast(hooked ? `🎣 Hai pescato: ${NAMES[id]}!` : '🎣 Niente... tira su quando il galleggiante va sotto');
+  scene.remove(bob.mesh, bob.line);
+  bob.mesh.geometry.dispose();
+  bob.line.geometry.dispose();
+  bob = null;
+  swing ||= 0.01;
+}
+
+function updateFishing() {
+  if (!bob) return;
+  if (heldId() !== ROD || bob.mesh.position.distanceTo(player.pos) > 20) return reel();
+  const biting = clock > bob.bite && clock < bob.bite + 1.5;
+  bob.mesh.position.y = bob.y + (biting ? -0.25 : Math.sin(clock * 3) * 0.04);
+  if (biting && !bob.splash) { bob.splash = true; sound(500, 0.3, 0.3); for (let i = 0; i < 10; i++) glint(bob.mesh.position.clone(), '#cfe9ff', 0.6, spread(3).setY(2)); }
+  if (clock > bob.bite + 1.5) { bob.bite = clock + 3 + rnd() * 7; bob.splash = false; }
+  bob.line.geometry.setFromPoints([tip.getWorldPosition(new THREE.Vector3()), bob.mesh.position]);
+}
+
+function befriend(a, id) {
+  if (a.pet) { a.sit = !a.sit; return toast(`${a.name}: ${a.sit ? 'Seduto!' : 'Andiamo!'}`); }
+  if (!MEATS.includes(id)) return toast('Il cane ti annusa la mano... forse vuole un po\' di carne');
+  useUp();
+  Object.assign(a, { pet: true, hp: 99, name: choice(['Fido', 'Rex', 'Luna', 'Briciola', 'Pippo', 'Argo']) });
+  for (let i = 0; i < 12; i++) glint(a.g.position.clone().setY(a.g.position.y + 1), '#ff6b9a', 1, spread(2));
+  toast(`🐶 ${a.name} è il tuo nuovo amico! Cliccalo per farlo sedere`);
+  award('pet');
+}
+
+function follow(a) {
+  const p = a.g.position, d = Math.hypot(player.pos.x - p.x, player.pos.z - p.z);
+  a.walk = !a.sit && d > 3.5;
+  if (a.walk) a.yaw = Math.atan2(player.pos.x - p.x, player.pos.z - p.z);
+  if (!a.sit && d > 24) p.set(player.pos.x + Math.sin(player.yaw) * 2, player.pos.y + 1, player.pos.z + Math.cos(player.yaw) * 2);
+}
+
+function adopt(type, name) {
+  if (type === 'owl') return makeOwl(name);
+  makeAnimal(type, player.pos.x + 1, player.pos.y + 1, player.pos.z + 1);
+  Object.assign(animals.at(-1), { pet: true, hp: 99, name });
+}
+
+function makeOwl(name) {
+  const g = new THREE.Group(), mats = ['#8b6b4a', '#f2e6d0', '#ffcc00'].map(lambert), [brown, cream, eye] = mats;
+  part(g, 0.36, 0.45, 0.32, brown).position.y = 0.3;
+  part(g, 0.34, 0.3, 0.3, brown).position.y = 0.66;
+  part(g, 0.24, 0.2, 0.02, cream).position.set(0, 0.66, 0.16);
+  for (const sx of [-1, 1]) part(g, 0.07, 0.07, 0.03, eye).position.set(sx * 0.07, 0.7, 0.18);
+  const wings = [-1, 1].map(sx => { const w = part(g, 0.05, 0.35, 0.28, brown); w.geometry.translate(0, -0.15, 0); w.position.set(sx * 0.2, 0.45, 0); return w; });
+  g.position.copy(player.pos).y += 3;
+  scene.add(g);
+  animals.push({ type: 'owl', name, pet: true, g, legs: wings, mats, vel: new THREE.Vector3(), yaw: 0, hp: 99, timer: 0, walk: false, flee: 0, hurt: 0, ground: false, mail: 240 });
+}
+
+function hover(a, dt) {
+  const g = a.g.position, prev = g.clone(), t = clock * 0.8;
+  g.lerp(player.pos.clone().add(new THREE.Vector3(Math.cos(t) * 2, 2.6 + Math.sin(t * 2) * 0.3, Math.sin(t) * 2)), Math.min(1, dt * 2));
+  if (dt) a.g.rotation.y = Math.atan2(g.x - prev.x, g.z - prev.z);
+  a.legs.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * Math.sin(clock * 14) * 0.7);
+  if ((a.mail -= dt) > 0) return;
+  a.mail = 240;
+  const id = choice([BREAD, EMERALD, GOLD, DIAMOND, SNITCH, SEEDS, 184 + (rnd() * POTIONS.length | 0)]);
+  drop(id, 1, g.x, g.y, g.z);
+  toast(`🦉 ${a.name} ti ha portato: ${NAMES[id]}`);
 }
 
 function updateMagic(dt) {
@@ -2231,14 +2418,15 @@ function drawInv() {
 }
 
 function drawCraft() {
-  const can = ([need]) => is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k);
-  $('.recipes').replaceChildren(...RECIPES.filter(r => !$('.can').checked || can(r)).map(([need, out, n]) => {
+  const here = STATIONS.filter(nearby), can = ([need, , , at]) => (is('infinite') || Object.entries(need).every(([id, k]) => count(+id) >= k)) && (!at || here.includes(at));
+  $('.craft-title').textContent = station ? NAMES[station] : 'Crafting';
+  $('.recipes').replaceChildren(...RECIPES.filter(r => (!station || r[3] === station) && (!$('.can').checked || can(r))).map(([need, out, n, at]) => {
     const b = document.createElement('button'), row = document.createElement('div');
     b.className = 'recipe';
     row.className = 'row';
     row.append(...Object.entries(need).map(([id, k]) => slot(id, k)), '→', slot(out, n));
-    b.append(row, NAMES[out]);
-    b.disabled = !can([need]) || TOOL_IDS.includes(out) && count(out) > 0;
+    b.append(row, NAMES[out] + (at ? ` · ${at === FURNACE ? '🔥' : '⚗️'} serve ${NAMES[at].toLowerCase()} vicino` : ''));
+    b.disabled = !can([need, , , at]) || TOOL_IDS.includes(out) && count(out) > 0;
     b.onclick = () => craft(need, out, n);
     return b;
   }));
@@ -2295,7 +2483,8 @@ function start() {
   setPlaying(true);
 }
 
-function openMenu(name) {
+function openMenu(name, at = null) {
+  station = at;
   for (const m of MENUS) $('.' + m).style.display = m === name ? '' : 'none';
   if (!name && hp <= 0) {
     hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity;
@@ -2342,7 +2531,7 @@ function sky(dt) {
   time += dt;
   const a = time / DAY * Math.PI * 2, light = 0.08 + 0.92 * THREE.MathUtils.smoothstep(Math.sin(a), -0.15, 0.25), c = camera.position;
   const fluid = get(Math.floor(c.x), Math.floor(c.y), Math.floor(c.z)), wet = isWater(fluid), hot = isLava(fluid);
-  ambient.intensity = light * Math.PI;
+  ambient.intensity = Math.max(light, effect('night') ? 0.7 : 0) * Math.PI;
   scene.background.lerpColors(NIGHTSKY, wet ? DEEP : DAYSKY, light);
   if (hot) scene.background.set(HOT);
   scene.fog.color.copy(scene.background);
@@ -2389,7 +2578,7 @@ function lightTorches() {
 function hud(r) {
   const p = player.pos, [, type, min = 0] = r && HARD[get(...r.hit)] || [];
   const need = !is('instant') && tier(type) < min ? ` · serve: ${NAMES[TOOLS[type][min - 1]]}` : '';
-  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins} · 🧭 ${bed ? 'letto' : 'inizio'} ${compass(...(bed ?? [8, 0, 8]))}${quest ? ` · 📜 ${NAMES[quest.id]} ${Math.min(count(quest.id), quest.n)}/${quest.n}` : ''}${need}`;
+  return `${NAMES[heldId()] || 'Mano'} · ${Math.floor(p.x)} ${Math.floor(p.y)} ${Math.floor(p.z)}${player.fly ? ' · volo' : ''}${player.riding ? ' · a cavallo' : ''}${player.broom ? ' · in scopa' : ''}${mode === 'creative' ? ' · creativa' : ''} · 🪙 ${coins} · 🧭 ${bed ? 'letto' : 'inizio'} ${compass(...(bed ?? [8, 0, 8]))}${Object.entries(effects).filter(([, t]) => t > clock).map(([k, t]) => ` · ${EFFECT_ICON[k]} ${Math.ceil(t - clock)}s`).join('')}${quest ? ` · 📜 ${NAMES[quest.id]} ${Math.min(count(quest.id), quest.n)}/${quest.n}` : ''}${need}`;
 }
 
 function spawn() {
@@ -2428,7 +2617,8 @@ function loop(t) {
   updateMagic(dt);
   updateSnitch(dt);
   updateQuidditch(dt);
-  if ((checkT += dt) > 0.5) { checkT = 0; checkGoals(); }
+  if ((checkT += dt) > 0.5) { checkT = 0; checkGoals(); grow(); }
+  updateFishing();
   updateCars(dt);
   if (dt) updateFlyers(dt, Math.sin(time / DAY * Math.PI * 2) > 0);
   drawHearts();
@@ -2437,8 +2627,9 @@ function loop(t) {
   lightTorches();
   tip.visible = lumos && heldId() === WAND;
   tip.scale.setScalar(0.3 + Math.sin(clock * 6) * 0.03);
-  handLight.intensity = heldId() === TORCH || GLOW.includes(heldId()) || tip.visible ? 5 : 0;
-  handLight.color.set(tip.visible ? '#dfe9ff' : '#ffb060');
+  handLight.intensity = effect('night') ? 6 : heldId() === TORCH || GLOW.includes(heldId()) || tip.visible ? 5 : 0;
+  handLight.distance = effect('night') ? 40 : 12;
+  handLight.color.set(tip.visible || effect('night') ? '#dfe9ff' : '#ffb060');
   handLight.position.copy(camera.position);
   if (playing || t - drawn > 250) { drawn = t; renderer.render(scene, camera); }
   requestAnimationFrame(loop);
@@ -2496,7 +2687,7 @@ for (const b of document.querySelectorAll('[data-key]')) {
 }
 oncontextmenu = e => e.preventDefault();
 onresize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
-document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast] }));
+document.onvisibilitychange = () => localStorage.setItem('blocchi-save', JSON.stringify({ pos: player.pos.toArray(), slots, time, hp, bed, mode, coins, locks: [...locks], caught, quest, done, tip: tipAt, trophies: [...got], spellsCast: [...spellsCast], crops: [...crops], pets: animals.filter(a => a.pet).map(a => [a.type, a.name]) }));
 $('.play').onclick = start;
 for (const b of document.querySelectorAll('[data-menu]')) b.onclick = () => openMenu(b.dataset.menu);
 $('.infinite').onchange = e => { cheat.infinite = e.target.checked; drawInv(); };
@@ -2539,6 +2730,7 @@ document.body.style.setProperty('--img', `url(${atlas.toDataURL()})`);
 if (saved?.inv && !saved.slots) saved.inv.forEach((n, id) => n > 0 && give(id, n));
 setMode(mode);
 if (saved) player.pos.fromArray(saved.pos); else spawn();
+for (const [type, name] of saved?.pets ?? []) adopt(type, name);
 requestAnimationFrame(loop);
 </script>
 </body>
