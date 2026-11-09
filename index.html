@@ -2797,6 +2797,7 @@ function start() {
     hp = 20; air = 10; player.vel.set(0, 0, 0); player.peak = -Infinity; player.riding = null; player.broom = broom.visible = false;
     if (bed && get(...bed) === BED) player.pos.set(bed[0] + 0.5, bed[1] + 1, bed[2] + 0.5); else spawn();
   }
+  document.activeElement?.blur();
   audio ??= new AudioContext();
   audio.resume();
   if (!touch) return document.body.requestPointerLock();
@@ -2956,7 +2957,7 @@ function loop(t) {
 }
 
 onkeydown = e => {
-  if (e.target?.tagName === 'INPUT' && e.target.type !== 'checkbox') return;
+  if (e.target?.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.offsetParent) return;
   keys[e.code] = true;
   if (/^Digit[1-9]$/.test(e.code)) choose(e.code[5] - 1);
   if (e.code === 'Pause' || e.code === 'Escape' && menu()) openMenu('pause');
